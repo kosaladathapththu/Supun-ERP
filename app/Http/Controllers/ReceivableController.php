@@ -1,0 +1,15 @@
+<?php
+namespace App\Http\Controllers;
+use App\Http\Requests\CustomerReceiptRequest;
+use App\Models\{Customer,CustomerReceipt,Sale};
+use App\Services\CustomerReceiptService;
+use Illuminate\Http\Request;
+class ReceivableController extends Controller
+{
+    public function index(Request $r){$company=$r->user()->company_id;$q=CustomerReceipt::with('customer')->where('company_id',$company);if($r->filled('customer_id'))$q->where('customer_id',$r->customer_id);return view('receivables.index',['receipts'=>$q->latest('receipt_date')->paginate(20)->withQueryString(),'customers'=>Customer::where('company_id',$company)->where('is_active',1)->orderBy('name')->get()]);}
+    public function create(Request $r){$company=$r->user()->company_id;$customers=Customer::where('company_id',$company)->where('is_active',1)->orderBy('name')->get();$customerId=$r->integer('customer_id');$sales=collect();if($customerId)$sales=Sale::where('company_id',$company)->where('customer_id',$customerId)->where('status','posted')->where('balance_amount','>',0)->oldest('due_date')->get();return view('receivables.create',compact('customers','sales','customerId'));}
+    public function store(CustomerReceiptRequest $r,CustomerReceiptService $service){$receipt=$service->post($r->validated(),$r->user());return redirect()->route('receivables.show',$receipt)->with('success','Customer receipt posted successfully.');}
+    public function show(Request $r,CustomerReceipt $receipt){abort_unless($receipt->company_id===$r->user()->company_id,404);$receipt->load(['customer','allocations.sale']);return view('receivables.show',compact('receipt'));}
+    public function ledger(Request $r,Customer $customer){abort_unless($customer->company_id===$r->user()->company_id,404);$sales=Sale::where('customer_id',$customer->id)->where('status','posted')->orderBy('sale_date')->get();$receipts=CustomerReceipt::where('customer_id',$customer->id)->where('status','posted')->orderBy('receipt_date')->get();return view('receivables.ledger',compact('customer','sales','receipts'));}
+    public function aging(Request $r){$company=$r->user()->company_id;$sales=Sale::with('customer')->where('company_id',$company)->where('status','posted')->where('balance_amount','>',0)->get();$rows=$sales->groupBy('customer_id')->map(function($items){$b=['current'=>0,'days_1_30'=>0,'days_31_60'=>0,'days_61_90'=>0,'over_90'=>0,'total'=>0];foreach($items as $s){$days=$s->due_date?now()->startOfDay()->diffInDays($s->due_date,false)*-1:0;$key=$days<=0?'current':($days<=30?'days_1_30':($days<=60?'days_31_60':($days<=90?'days_61_90':'over_90')));$b[$key]+=(float)$s->balance_amount;$b['total']+=(float)$s->balance_amount;}$b['customer']=$items->first()->customer;return $b;})->values();return view('receivables.aging',compact('rows'));}
+}

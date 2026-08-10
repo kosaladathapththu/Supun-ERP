@@ -1,0 +1,7 @@
+@extends('layouts.app')
+@section('title','Executive Dashboard')
+@section('content')
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 page-title mb-1">Business overview</h1><p class="text-muted mb-0">Live master-data and control metrics from the ERP database.</p></div><span class="badge badge-soft px-3 py-2"><i class="bi bi-database-check me-1"></i> Database connected</span></div>
+<div class="row g-4">@foreach($metrics as $label=>$value)<div class="col-sm-6 col-xl-4"><div class="card h-100"><div class="card-body p-4 d-flex justify-content-between"><div><div class="text-muted small mb-2">{{ $label }}</div><div class="h3 fw-bold mb-0">{{ in_array($label,["Today's sales","Today's gross profit",'Customer outstanding'])?'Rs. '.number_format($value,2):number_format($value) }}</div></div><div class="metric-icon"><i class="bi bi-graph-up-arrow"></i></div></div></div></div>@endforeach</div>
+<div class="card mt-4"><div class="card-body p-4"><h2 class="h5 fw-bold">Foundation status</h2><p class="text-muted mb-3">Authentication, permissions, company settings, accounting periods, Chart of Accounts and master-data schema are active. Transaction KPIs will appear only after the corresponding sales, purchases, inventory and accounting phases are implemented.</p><div class="progress" style="height:8px"><div class="progress-bar" style="width:18%"></div></div><small class="text-muted d-block mt-2">Phase-based ERP implementation in progress</small></div></div>
+@endsection
