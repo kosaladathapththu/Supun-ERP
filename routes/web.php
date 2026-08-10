@@ -17,6 +17,7 @@ use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\PayableController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\SaleReturnController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::middleware('permission:inventory.view')->group(function(){Route::get('stock',[StockController::class,'index'])->name('stock.index');Route::get('stock/{product}/ledger',[StockController::class,'ledger'])->name('stock.ledger');});
     Route::resource('sales', SaleController::class)->only(['index','create','store','show'])->middleware('permission:sales.view');
+    Route::middleware('permission:sales.view')->group(function(){Route::get('sale-returns',[SaleReturnController::class,'index'])->name('sale-returns.index');Route::get('sales/{sale}/return',[SaleReturnController::class,'create'])->name('sale-returns.create');Route::post('sales/{sale}/return',[SaleReturnController::class,'store'])->name('sale-returns.store');Route::get('sale-returns/{sale_return}',[SaleReturnController::class,'show'])->name('sale-returns.show');});
     Route::middleware('permission:sales.view')->group(function(){
         Route::get('receivables/aging',[ReceivableController::class,'aging'])->name('receivables.aging');
         Route::get('receivables/customers/{customer}/ledger',[ReceivableController::class,'ledger'])->name('receivables.ledger');

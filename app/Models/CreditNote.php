@@ -1,0 +1,3 @@
+<?php
+namespace App\Models;use Illuminate\Database\Eloquent\Model;
+class CreditNote extends Model{protected $guarded=[];protected $casts=['note_date'=>'datetime'];}
