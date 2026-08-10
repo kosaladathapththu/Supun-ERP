@@ -18,6 +18,7 @@ use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\PayableController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SaleReturnController;
+use App\Http\Controllers\PurchaseReturnController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -42,6 +43,10 @@ Route::middleware('auth')->group(function () {
         Route::post('purchase-orders/{purchase_order}/receive',[GoodsReceivedNoteController::class,'store'])->name('grn.store');
         Route::get('grn',[GoodsReceivedNoteController::class,'index'])->name('grn.index');
         Route::get('grn/{grn}',[GoodsReceivedNoteController::class,'show'])->name('grn.show');
+        Route::get('purchase-returns',[PurchaseReturnController::class,'index'])->name('purchase-returns.index');
+        Route::get('grn/{grn}/return',[PurchaseReturnController::class,'create'])->name('purchase-returns.create');
+        Route::post('grn/{grn}/return',[PurchaseReturnController::class,'store'])->name('purchase-returns.store');
+        Route::get('purchase-returns/{purchase_return}',[PurchaseReturnController::class,'show'])->name('purchase-returns.show');
     });
     Route::middleware('permission:inventory.view')->group(function(){Route::get('stock',[StockController::class,'index'])->name('stock.index');Route::get('stock/{product}/ledger',[StockController::class,'ledger'])->name('stock.ledger');});
     Route::resource('sales', SaleController::class)->only(['index','create','store','show'])->middleware('permission:sales.view');
