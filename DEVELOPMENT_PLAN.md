@@ -21,7 +21,7 @@ Laravel provides the HTTP, authentication, authorization and domain-service laye
 5. **Receivables (workflow complete; accounting reconciliation pending Phase 6):** receipts, allocation, advances, customer ledger and aging. Gate: receipt allocation tests pass; AR control account reconciliation follows accounting posting.
 6. **Accounting engine (sales and receivables complete):** balanced journal service, period validation, sales/receipt posting, journals, trial balance and GL. Purchase/AP posting continues with Phase 7. Gate: unbalanced and closed-period posting rejected.
 7. **Payables/cash/bank/expenses (complete):** GRN-linked supplier invoices, supplier payments/advances, AP ledger and aging, cash/bank expense vouchers and accounting posting. Gate: AP and journal tests pass.
-8. **Returns/notes:** sale and purchase returns, exchanges, credit/debit notes and reversals. Gate: stock/accounting reversal tests.
+8. **Returns/notes (in progress):** sale and purchase returns plus credit/debit notes are operational and tested. Exchanges and formal document reversals remain. Gate: stock/accounting reversal tests.
 9. **Statements:** trial balance, P&L, balance sheet, cash flow and reconciliation. Gate: debit=credit and balance sheet equation.
 10. **Management intelligence:** margins, profitability, stock valuation, CFO dashboard and report center. Gate: drill-down totals agree with sources.
 11. **Document workflows:** quotations, SO, delivery, PO/partial GRN and statuses. Gate: conversion traceability.
