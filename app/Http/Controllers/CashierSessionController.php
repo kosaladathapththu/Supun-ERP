@@ -28,7 +28,7 @@ class CashierSessionController extends Controller
 
     public function close(Request $request, CashierSession $session, CashierSessionService $service)
     {
-        abort_unless($session->company_id === $request->user()->company_id && $session->user_id === $request->user()->id, 404);
+        abort_unless((int)$session->company_id === (int)$request->user()->company_id && (int)$session->user_id === (int)$request->user()->id, 404);
         $data = $request->validate(['actual_cash' => ['required','numeric','min:0'], 'closing_notes' => ['nullable','string','max:1000']]);
         $service->close($session, $request->user(), $data);
         return back()->with('success', 'Cashier session closed and reconciled.');

@@ -22,14 +22,14 @@ class FoundationSchemaTest extends TestCase
         }
 
         $this->assertSame(5, DB::table('roles')->count());
-        $this->assertSame(112, DB::table('permissions')->count());
+        $this->assertSame(119, DB::table('permissions')->count());
         $this->assertSame(35, DB::table('accounts')->count());
         $this->assertSame(12, DB::table('accounting_periods')->count());
         $this->assertDatabaseHas('customers', ['code' => 'WALK-IN', 'is_walk_in' => true]);
         $admin = DB::table('users')->where('email', 'admin@supun-erp.local')->first();
         $this->assertNotNull($admin);
         $this->assertTrue(Hash::check('ChangeMe!2026', $admin->password));
-        $this->assertSame(112, DB::table('role_permissions')->count());
+        $this->assertSame(119, DB::table('role_permissions')->count());
     }
 
     public function test_foundation_foreign_keys_are_declared(): void
