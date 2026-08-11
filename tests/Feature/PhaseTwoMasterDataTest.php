@@ -79,7 +79,7 @@ class PhaseTwoMasterDataTest extends TestCase
 
         $replenishment=implode("\n",[
             'supplier_code,supplier_name,supplier_phone,supplier_invoice_number,purchase_date,payment_due_date,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking,quantity',
-            'SUP-CSV,CSV Supplier,0111111111,SINV-200,2035-08-11,,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1200,1400,1300,2,5,12,yes,5',
+            ',CSV Supplier,0111111111,SINV-200,2035-08-11,,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1200,1400,1300,2,5,12,yes,5',
         ]);
         $this->post(route('imports.store'),['file'=>UploadedFile::fake()->createWithContent('replenishment.csv',$replenishment)])->assertSessionHasNoErrors();
         $restockBatch=ImportBatch::latest('id')->firstOrFail();$this->post(route('imports.confirm',$restockBatch))->assertSessionHasNoErrors();
@@ -88,6 +88,19 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertDatabaseHas('goods_received_notes',['supplier_invoice_number'=>'SINV-200','status'=>'posted']);
         $this->assertDatabaseHas('supplier_invoices',['supplier_invoice_number'=>'SINV-200','total_amount'=>6000,'balance_amount'=>6000,'payment_status'=>'unpaid']);
         $invoice=\App\Models\SupplierInvoice::where('supplier_invoice_number','SINV-200')->firstOrFail();$this->assertDatabaseHas('journal_entries',['source_type'=>\App\Models\SupplierInvoice::class,'source_id'=>$invoice->id]);
+    }
+
+    public function test_blank_supplier_code_reuses_supplier_or_generates_next_code(): void
+    {
+        $admin=User::where('email','admin@supun-erp.local')->firstOrFail();
+        DB::table('suppliers')->insert(['company_id'=>$admin->company_id,'code'=>'SUP-007','name'=>'Known Supplier','phone'=>'0112223333','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);
+        $header='supplier_code,supplier_name,supplier_phone,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking,quantity';
+        $csv=implode("\n",[$header,',Known Supplier,0112223333,AUTO-SUP-1,Known Product,,Brand,PCS,Test,100,120,110,0,0,0,no,1',',New Supplier,0775556666,AUTO-SUP-2,New Product,,Brand,PCS,Test,200,240,220,0,0,0,no,1']);
+        $this->actingAs($admin)->post(route('imports.store'),['file'=>UploadedFile::fake()->createWithContent('automatic-suppliers.csv',$csv)])->assertSessionHasNoErrors();
+        $batch=ImportBatch::latest('id')->firstOrFail();$this->assertSame(2,$batch->valid_rows);
+        $this->post(route('imports.confirm',$batch))->assertSessionHasNoErrors();
+        $this->assertSame(1,DB::table('suppliers')->where('name','Known Supplier')->count());
+        $this->assertDatabaseHas('suppliers',['name'=>'New Supplier','phone'=>'0775556666','code'=>'SUP-008']);
     }
 
     public function test_excel_csv_with_carriage_return_rows_validates_every_data_row(): void
