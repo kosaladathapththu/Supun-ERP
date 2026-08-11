@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\UploadedFile;
 use App\Models\ImportBatch;
 use Tests\TestCase;
+use ZipArchive;
 
 class PhaseTwoMasterDataTest extends TestCase
 {
@@ -89,5 +90,28 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertSame(3, $batch->valid_rows);
         $this->assertSame(0, $batch->invalid_rows);
         $this->assertCount(3, $batch->rows);
+    }
+
+    public function test_native_excel_workbook_validates_every_row(): void
+    {
+        $admin = User::where('email', 'admin@supun-erp.local')->firstOrFail();
+        $rows = [
+            ['supplier_code','supplier_name','supplier_phone','item_code','product_name','barcode','brand','unit','category','cost_price','retail_price','wholesale_price','minimum_stock','reorder_level','warranty_months','serial_tracking'],
+            ['SUP-X1','Excel Supplier','0110000000','XLSX-001','Excel Phone','001234567890','Acme','PCS','Phones','1000','1250','1150','2','5','12','yes'],
+            ['SUP-X2','Excel Supplier 2','0770000000','XLSX-002','Excel TV','009876543210','Acme','PCS','TV','2000','2500','2300','2','5','12','no'],
+        ];
+        $path = tempnam(sys_get_temp_dir(), 'erp-xlsx-');
+        $zip = new ZipArchive(); $zip->open($path, ZipArchive::CREATE|ZipArchive::OVERWRITE);
+        $zip->addFromString('[Content_Types].xml','<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>');
+        $zip->addFromString('_rels/.rels','<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+        $zip->addFromString('xl/workbook.xml','<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Import" sheetId="1" r:id="rId1"/></sheets></workbook>');
+        $zip->addFromString('xl/_rels/workbook.xml.rels','<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>');
+        $sheet='<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+        foreach($rows as $r=>$values){$sheet.='<row r="'.($r+1).'">';foreach($values as $c=>$value){$column=chr(65+$c);$sheet.='<c r="'.$column.($r+1).'" t="inlineStr"><is><t>'.htmlspecialchars($value,ENT_XML1).'</t></is></c>';}$sheet.='</row>';}$sheet.='</sheetData></worksheet>';
+        $zip->addFromString('xl/worksheets/sheet1.xml',$sheet);$zip->close();
+        $file = new UploadedFile($path,'products.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',null,true);
+        $this->actingAs($admin)->post(route('imports.store'),['file'=>$file])->assertSessionHasNoErrors();
+        $batch=ImportBatch::latest('id')->firstOrFail();
+        $this->assertSame(2,$batch->total_rows);$this->assertSame(2,$batch->valid_rows);$this->assertSame('001234567890',$batch->rows()->first()->data['barcode']);
     }
 }

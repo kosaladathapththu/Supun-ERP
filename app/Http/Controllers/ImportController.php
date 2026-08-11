@@ -32,6 +32,7 @@ class ImportController extends Controller
     {
         $uploaded = $request->file('file');
         $excel = strtolower($uploaded->getClientOriginalExtension()) === 'xlsx';
+        $handle = $delimiter = null;
         $excelRows = $excel ? app(XlsxReader::class)->rows($uploaded->getRealPath()) : null;
         if ($excel) $firstRow = array_shift($excelRows) ?: [];
         else { [$handle, $delimiter] = $this->openCsv($uploaded->getRealPath()); $firstRow = fgetcsv($handle, 0, $delimiter) ?: []; }
