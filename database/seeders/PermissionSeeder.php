@@ -21,9 +21,9 @@ class PermissionSeeder extends Seeder
                 );
             }
         }
-        $adminRoleId = DB::table('roles')->where('slug', 'main-admin')->value('id');
-        foreach (DB::table('permissions')->pluck('id') as $permissionId) {
-            DB::table('role_permissions')->updateOrInsert(['role_id' => $adminRoleId, 'permission_id' => $permissionId]);
+        $fullAccessRoleIds = DB::table('roles')->whereIn('slug', ['main-admin', 'cfo'])->pluck('id');
+        foreach ($fullAccessRoleIds as $roleId) foreach (DB::table('permissions')->pluck('id') as $permissionId) {
+            DB::table('role_permissions')->updateOrInsert(['role_id' => $roleId, 'permission_id' => $permissionId]);
         }
     }
 }

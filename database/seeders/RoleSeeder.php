@@ -12,7 +12,7 @@ class RoleSeeder extends Seeder
         $companyId = DB::table('companies')->where('code', 'SUPUN')->value('id');
         foreach ([
             ['Main Admin', 'main-admin', 'Full system access'],
-            ['CFO', 'cfo', 'Financial dashboards and reports'],
+            ['CFO', 'cfo', 'Chief Financial Officer — full ERP and administration access'],
             ['Manager', 'manager', 'Operational management and approvals'],
             ['Cashier', 'cashier', 'POS, receipts and cashier closing'],
             ['Storekeeper', 'storekeeper', 'Inventory, receiving and stock control'],
