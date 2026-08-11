@@ -22,7 +22,8 @@
             $salesOpen=request()->routeIs('sales.*','quotations.*','sales-orders.*','delivery-notes.*','sale-returns.*','sales-exchanges.*');
             $purchaseOpen=request()->routeIs('purchase-orders.*','grn.*','purchase-returns.*');
             $inventoryOpen=request()->routeIs('stock.*','inventory-operations.*');
-            $financeOpen=request()->routeIs('cashier-sessions.*','receivables.*','payables.*','expenses.*','accounting.*','statements.*','reports.*');
+            $financeOpen=request()->routeIs('cashier-sessions.*','receivables.*','payables.*','expenses.*','accounting.*');
+            $reportsOpen=request()->routeIs('statements.*','reports.*');
             $adminOpen=request()->routeIs('admin.*','controls.*');
         @endphp
         <div class="nav-section">MAIN MENU</div>
@@ -33,7 +34,8 @@
           ['salesMenu','cart3','Sales',$salesOpen,[['sales.create','cart-plus','New Sale / POS'],['sales.index','receipt','All Sales'],['sales.index','cash','Cash Sales',['payment_type'=>'cash']],['sales.index','credit-card','Credit Sales',['payment_type'=>'credit']],['quotations.index','file-earmark-text','Quotations'],['sales-orders.index','clipboard-check','Sales Orders'],['delivery-notes.index','truck','Delivery Notes'],['sale-returns.index','arrow-return-left','Sales Returns']]],
           ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
-          ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','cash-coin','Receivables'],['payables.index','wallet2','Payables'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting'],['statements.index','file-earmark-bar-graph','Statements'],['reports.index','bar-chart','Reports']]],
+          ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','cash-coin','Receivables'],['payables.index','wallet2','Payables'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting']]],
+          ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
           ['adminMenu','gear','Administration',$adminOpen,[['admin.users.index','people','Staff Users'],['admin.roles.index','person-lock','Roles & Permissions'],['controls.index','shield-check','Control Center']]]
         ];
         @endphp
