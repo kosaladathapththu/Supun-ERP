@@ -76,6 +76,18 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertDatabaseHas('journal_entries',['source_type'=>ImportBatch::class,'source_id'=>$batch->id]);
         $this->assertDatabaseHas('suppliers', ['code'=>'SUP-CSV']);
         $this->assertSame('imported', $batch->fresh()->status);
+
+        $replenishment=implode("\n",[
+            'supplier_code,supplier_name,supplier_phone,supplier_invoice_number,purchase_date,payment_due_date,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking,quantity',
+            'SUP-CSV,CSV Supplier,0111111111,SINV-200,2026-08-11,2026-09-10,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1200,1400,1300,2,5,12,yes,5',
+        ]);
+        $this->post(route('imports.store'),['file'=>UploadedFile::fake()->createWithContent('replenishment.csv',$replenishment)])->assertSessionHasNoErrors();
+        $restockBatch=ImportBatch::latest('id')->firstOrFail();$this->post(route('imports.confirm',$restockBatch))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('products',['item_code'=>'CSV-001','current_quantity'=>15]);
+        $this->assertDatabaseHas('purchase_orders',['supplier_id'=>DB::table('suppliers')->where('code','SUP-CSV')->value('id'),'status'=>'received']);
+        $this->assertDatabaseHas('goods_received_notes',['supplier_invoice_number'=>'SINV-200','status'=>'posted']);
+        $this->assertDatabaseHas('supplier_invoices',['supplier_invoice_number'=>'SINV-200','total_amount'=>6000,'balance_amount'=>6000,'payment_status'=>'unpaid']);
+        $invoice=\App\Models\SupplierInvoice::where('supplier_invoice_number','SINV-200')->firstOrFail();$this->assertDatabaseHas('journal_entries',['source_type'=>\App\Models\SupplierInvoice::class,'source_id'=>$invoice->id]);
     }
 
     public function test_excel_csv_with_carriage_return_rows_validates_every_data_row(): void
