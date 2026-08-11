@@ -21,7 +21,7 @@ class DashboardController extends Controller
             'Low stock items' => DB::table('products')->where('company_id', $companyId)->where('is_active', true)->whereColumn('current_quantity', '<=', 'reorder_level')->count(),
             'Open periods' => DB::table('accounting_periods')->where('status', 'open')->count(),
         ];
-        $development = ['percent' => 65, 'phase' => 'Phase 8 of 12', 'label' => 'Returns and notes operational; exchanges and reversals next'];
+        $development = ['percent' => 75, 'phase' => 'Phase 9 of 12', 'label' => 'Financial statements complete; management intelligence next'];
         return view('dashboard', compact('metrics', 'development'));
     }
 }

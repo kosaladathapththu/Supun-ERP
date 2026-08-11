@@ -19,6 +19,7 @@ use App\Http\Controllers\PayableController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SaleReturnController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\StatementController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -57,6 +58,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('receivables',ReceivableController::class)->only(['index','create','store','show']);
     });
     Route::middleware('permission:accounting.view')->prefix('accounting')->name('accounting.')->group(function(){Route::get('journals',[AccountingController::class,'journals'])->name('journals');Route::get('journals/{journal}',[AccountingController::class,'show'])->name('show');Route::get('trial-balance',[AccountingController::class,'trialBalance'])->name('trial-balance');Route::get('ledger/{account}',[AccountingController::class,'ledger'])->name('ledger');});
+    Route::middleware('permission:accounting.view')->prefix('statements')->name('statements.')->group(function(){Route::get('/',[StatementController::class,'index'])->name('index');Route::get('profit-loss',[StatementController::class,'profitLoss'])->name('profit-loss');Route::get('balance-sheet',[StatementController::class,'balanceSheet'])->name('balance-sheet');Route::get('cash-flow',[StatementController::class,'cashFlow'])->name('cash-flow');Route::get('reconciliation',[StatementController::class,'reconciliation'])->name('reconciliation');});
     Route::middleware('permission:purchases.view')->group(function(){Route::get('payables',[PayableController::class,'index'])->name('payables.index');Route::get('payables/payment',[PayableController::class,'create'])->name('payables.create');Route::post('payables/payment',[PayableController::class,'store'])->name('payables.store');Route::get('payables/aging',[PayableController::class,'aging'])->name('payables.aging');Route::get('payables/suppliers/{supplier}/ledger',[PayableController::class,'ledger'])->name('payables.ledger');});
     Route::resource('expenses',ExpenseController::class)->only(['index','create','store'])->middleware('permission:accounting.view');
     Route::middleware('permission:imports.view')->prefix('imports')->name('imports.')->group(function () {
