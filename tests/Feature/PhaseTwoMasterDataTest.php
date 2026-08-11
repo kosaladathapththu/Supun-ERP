@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\{Product,User};
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -95,9 +95,9 @@ class PhaseTwoMasterDataTest extends TestCase
         $admin = User::where('email', 'admin@supun-erp.local')->firstOrFail();
         $header = 'supplier_code,supplier_name,supplier_phone,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking';
         $rows = [
-            'SUP-001,Demo Supplier,0110000000,ITEM-001,Demo Product,890000000001,Demo Brand,PCS,Electronics,1000,1250,1150,2,5,12,yes',
-            'SUP-002,Fuji,123654987,ITEM-002,Rice cooker,890000000002,Fuji,PCS,Electronics,9000,15000,13000,2,5,12,yes',
-            'SUP-003,National,987456321,ITEM-003,Water Filter,890000000003,National,PCS,Filters,18000,25000,22000,2,5,12,yes',
+            'SUP-001,Demo Supplier,0110000000,ITEM-001,Demo Product,8.9E+11,Demo Brand,PCS,Electronics,1000,1250,1150,2,5,12,yes',
+            'SUP-002,Fuji,123654987,ITEM-002,Rice cooker,8.9E+11,Fuji,PCS,Electronics,9000,15000,13000,2,5,12,yes',
+            'SUP-003,National,987456321,ITEM-003,Water Filter,8.9E+11,National,PCS,Filters,18000,25000,22000,2,5,12,yes',
         ];
         $file = UploadedFile::fake()->createWithContent('excel-export.csv', $header."\r".implode("\r", $rows));
         $this->actingAs($admin)->post(route('imports.store'), ['file'=>$file])->assertSessionHasNoErrors();
@@ -106,6 +106,8 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertSame(3, $batch->valid_rows);
         $this->assertSame(0, $batch->invalid_rows);
         $this->assertCount(3, $batch->rows);
+        $this->actingAs($admin)->post(route('imports.confirm',$batch))->assertSessionHasNoErrors();
+        $this->assertSame(3,Product::whereIn('item_code',['ITEM-001','ITEM-002','ITEM-003'])->whereNull('barcode')->count());
     }
 
     public function test_native_excel_workbook_validates_every_row(): void
