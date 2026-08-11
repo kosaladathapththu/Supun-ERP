@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Carbon;
 
 class SerialNumberController extends Controller
 {
@@ -61,7 +62,7 @@ class SerialNumberController extends Controller
                 DB::table('sale_item_serials')->insert(['sale_item_id' => $item->id, 'product_serial_number_id' => $serialNumber->id]);
                 $start = $data['warranty_starts_on'] ?: $item->sale->sale_date->toDateString();
                 $data['warranty_starts_on'] = $start;
-                $data['warranty_expires_on'] = $data['warranty_expires_on'] ?: now()->parse($start)->addMonths($serialNumber->product->warranty_months)->toDateString();
+                $data['warranty_expires_on'] = $data['warranty_expires_on'] ?: Carbon::parse($start)->addMonths($serialNumber->product->warranty_months)->toDateString();
                 $data['status'] = 'sold';
             }
             unset($data['sale_item_id']);
