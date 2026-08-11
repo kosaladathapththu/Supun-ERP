@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="Supun Group">
+  <rect width="64" height="64" rx="14" fill="#17396b"/>
+  <path d="M18 20h11v8H18zm17 0h11v8H35zM18 36h11v8H18zm17 0h11v8H35z" fill="#fff"/>
+  <path d="M14 31h36M32 14v36" stroke="#5ea2ff" stroke-width="3"/>
+  <text x="76" y="29" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#102a50">SUPUN GROUP</text>
+  <text x="76" y="49" font-family="Arial,sans-serif" font-size="12" letter-spacing="2" fill="#4b6b94">ERP SYSTEM</text>
+</svg>
