@@ -26,7 +26,7 @@ class SaleController extends Controller
 
     public function create(Request $request)
     {
-        return $this->saleForm($request, 'cash');
+        return view('sales.choose');
     }
 
     public function cashCreate(Request $request)
