@@ -29,13 +29,13 @@ class ImportController extends Controller
 
     public function store(ImportUploadRequest $request)
     {
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        $headers = array_map(fn ($v) => Str::snake(trim((string) $v)), fgetcsv($handle) ?: []);
+        [$handle, $delimiter] = $this->openCsv($request->file('file')->getRealPath());
+        $headers = array_map(fn ($v) => Str::snake(trim((string) $v)), fgetcsv($handle, 0, $delimiter) ?: []);
         $missing = array_diff(['item_code','product_name','unit','category','cost_price','retail_price','wholesale_price'], $headers);
         if ($missing) return back()->withErrors(['file'=>'Missing required columns: '.implode(', ', $missing)]);
         $batch = ImportBatch::create(['uuid'=>(string)Str::uuid(),'company_id'=>$request->user()->company_id,'user_id'=>$request->user()->id,'type'=>'master_data','original_filename'=>$request->file('file')->getClientOriginalName(),'status'=>'validated']);
         $total=$valid=$invalid=0;
-        while (($values = fgetcsv($handle)) !== false) {
+        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
             if (++$total > 5000) { fclose($handle); $batch->delete(); return back()->withErrors(['file'=>'The import is limited to 5,000 rows per batch.']); }
             $values = array_pad($values, count($headers), null); $data = array_combine($headers, array_slice($values, 0, count($headers)));
             if (!array_filter($data, fn($v)=>trim((string)$v)!=='')) { $total--; continue; }
@@ -45,6 +45,22 @@ class ImportController extends Controller
         fclose($handle); $batch->update(['total_rows'=>$total,'valid_rows'=>$valid,'invalid_rows'=>$invalid]);
         DB::table('import_history')->insert(['import_batch_id'=>$batch->id,'user_id'=>$request->user()->id,'action'=>'validated','summary'=>json_encode(compact('total','valid','invalid')),'created_at'=>now(),'updated_at'=>now()]);
         return redirect()->route('imports.show',$batch);
+    }
+
+    private function openCsv(string $path): array
+    {
+        $content = (string) file_get_contents($path);
+        if (str_starts_with($content, "\xFF\xFE")) $content = iconv('UTF-16LE', 'UTF-8//IGNORE', substr($content, 2));
+        elseif (str_starts_with($content, "\xFE\xFF")) $content = iconv('UTF-16BE', 'UTF-8//IGNORE', substr($content, 2));
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        $content = str_replace(["\r\n", "\r"], "\n", $content);
+        $firstLine = strtok($content, "\n") ?: '';
+        $candidates = [',', ';', "\t"];
+        $delimiter = collect($candidates)->sortByDesc(fn($candidate) => count(str_getcsv($firstLine, $candidate)))->first();
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, $content);
+        rewind($handle);
+        return [$handle, $delimiter];
     }
 
     public function show(Request $request, ImportBatch $batch)

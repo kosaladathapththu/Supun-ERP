@@ -72,4 +72,22 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertDatabaseHas('suppliers', ['code'=>'SUP-CSV']);
         $this->assertSame('imported', $batch->fresh()->status);
     }
+
+    public function test_excel_csv_with_carriage_return_rows_validates_every_data_row(): void
+    {
+        $admin = User::where('email', 'admin@supun-erp.local')->firstOrFail();
+        $header = 'supplier_code,supplier_name,supplier_phone,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking';
+        $rows = [
+            'SUP-001,Demo Supplier,0110000000,ITEM-001,Demo Product,890000000001,Demo Brand,PCS,Electronics,1000,1250,1150,2,5,12,yes',
+            'SUP-002,Fuji,123654987,ITEM-002,Rice cooker,890000000002,Fuji,PCS,Electronics,9000,15000,13000,2,5,12,yes',
+            'SUP-003,National,987456321,ITEM-003,Water Filter,890000000003,National,PCS,Filters,18000,25000,22000,2,5,12,yes',
+        ];
+        $file = UploadedFile::fake()->createWithContent('excel-export.csv', $header."\r".implode("\r", $rows));
+        $this->actingAs($admin)->post(route('imports.store'), ['file'=>$file])->assertSessionHasNoErrors();
+        $batch = ImportBatch::latest('id')->firstOrFail();
+        $this->assertSame(3, $batch->total_rows);
+        $this->assertSame(3, $batch->valid_rows);
+        $this->assertSame(0, $batch->invalid_rows);
+        $this->assertCount(3, $batch->rows);
+    }
 }
