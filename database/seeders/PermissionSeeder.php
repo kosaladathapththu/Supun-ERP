@@ -19,7 +19,7 @@ class PermissionSeeder extends Seeder
         $permissions = DB::table('permissions')->get(['id', 'slug', 'module']);
         $profiles = [
             'main-admin' => $permissions->pluck('id'),
-            'cfo' => $permissions->reject(fn ($p) => in_array($p->slug, ['users.create', 'users.update', 'roles.create', 'roles.update'], true))->pluck('id'),
+            'cfo' => $permissions->reject(fn ($p) => in_array($p->slug, ['users.create', 'roles.update'], true))->pluck('id'),
             'manager' => $permissions->filter(fn ($p) => in_array($p->module, ['dashboard', 'sales', 'purchases', 'inventory', 'products', 'customers', 'suppliers', 'reports', 'imports', 'cashiers', 'audit', 'periods'], true))->pluck('id'),
             'cashier' => $permissions->filter(fn ($p) => in_array($p->slug, ['dashboard.view', 'sales.view', 'sales.create', 'sales.post', 'customers.view', 'customers.create', 'products.view', 'inventory.view', 'cashiers.view', 'cashiers.create', 'cashiers.post'], true))->pluck('id'),
             'storekeeper' => $permissions->filter(fn ($p) => in_array($p->module, ['dashboard', 'purchases', 'inventory', 'products', 'suppliers', 'imports'], true) && !in_array($p->slug, ['purchases.approve', 'imports.approve'], true))->pluck('id'),
