@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             PermissionSeeder::class,
             MainAdminSeeder::class,
+            StaffAccountSeeder::class,
             ChartOfAccountsSeeder::class,
             StockLocationSeeder::class,
         ]);

@@ -12,18 +12,23 @@ class PermissionSeeder extends Seeder
     {
         $modules = ['dashboard', 'sales', 'purchases', 'inventory', 'products', 'customers', 'suppliers', 'accounting', 'reports', 'imports', 'cashiers', 'users', 'roles', 'audit', 'periods', 'backups', 'settings'];
         $actions = ['view', 'create', 'update', 'post', 'reverse', 'approve', 'export'];
-        foreach ($modules as $module) {
-            foreach ($actions as $action) {
-                $slug = "$module.$action";
-                DB::table('permissions')->updateOrInsert(
-                    ['slug' => $slug],
-                    ['name' => Str::headline("$action $module"), 'module' => $module, 'description' => null, 'updated_at' => now(), 'created_at' => now()]
-                );
-            }
+        foreach ($modules as $module) foreach ($actions as $action) {
+            $slug = "$module.$action";
+            DB::table('permissions')->updateOrInsert(['slug' => $slug], ['name' => Str::headline("$action $module"), 'module' => $module, 'description' => null, 'updated_at' => now(), 'created_at' => now()]);
         }
-        $fullAccessRoleIds = DB::table('roles')->whereIn('slug', ['main-admin', 'cfo'])->pluck('id');
-        foreach ($fullAccessRoleIds as $roleId) foreach (DB::table('permissions')->pluck('id') as $permissionId) {
-            DB::table('role_permissions')->updateOrInsert(['role_id' => $roleId, 'permission_id' => $permissionId]);
+        $permissions = DB::table('permissions')->get(['id', 'slug', 'module']);
+        $profiles = [
+            'main-admin' => $permissions->pluck('id'),
+            'cfo' => $permissions->reject(fn ($p) => in_array($p->slug, ['users.create', 'users.update', 'roles.create', 'roles.update'], true))->pluck('id'),
+            'manager' => $permissions->filter(fn ($p) => in_array($p->module, ['dashboard', 'sales', 'purchases', 'inventory', 'products', 'customers', 'suppliers', 'reports', 'imports', 'cashiers', 'audit', 'periods'], true))->pluck('id'),
+            'cashier' => $permissions->filter(fn ($p) => in_array($p->slug, ['dashboard.view', 'sales.view', 'sales.create', 'sales.post', 'customers.view', 'customers.create', 'products.view', 'inventory.view', 'cashiers.view', 'cashiers.create', 'cashiers.post'], true))->pluck('id'),
+            'storekeeper' => $permissions->filter(fn ($p) => in_array($p->module, ['dashboard', 'purchases', 'inventory', 'products', 'suppliers', 'imports'], true) && !in_array($p->slug, ['purchases.approve', 'imports.approve'], true))->pluck('id'),
+        ];
+        foreach ($profiles as $roleSlug => $permissionIds) {
+            $roleId = DB::table('roles')->where('slug', $roleSlug)->value('id');
+            if (!$roleId) continue;
+            DB::table('role_permissions')->where('role_id', $roleId)->delete();
+            foreach ($permissionIds as $permissionId) DB::table('role_permissions')->insert(['role_id' => $roleId, 'permission_id' => $permissionId]);
         }
     }
 }
