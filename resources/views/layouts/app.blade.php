@@ -31,6 +31,8 @@
         <div class="nav-section">MAIN MENU</div>
         <a class="nav-link {{ request()->routeIs('dashboard')?'active':'' }}" href="{{ route('dashboard') }}"><i class="bi bi-grid-1x2"></i> Dashboard</a>
         <a class="nav-link pos-nav {{ $posOpen?'active':'' }}" href="{{ route('sales.create') }}"><i class="bi bi-calculator-fill"></i> POS</a>
+        <a class="nav-link {{ request()->routeIs('receivables.*')?'active':'' }}" href="{{ route('receivables.index') }}"><i class="bi bi-cash-coin"></i> Receivables</a>
+        <a class="nav-link {{ request()->routeIs('payables.*')?'active':'' }}" href="{{ route('payables.index') }}"><i class="bi bi-wallet2"></i> Payables</a>
         @php
         $groups=[
           ['masterMenu','database','Master Data',$masterOpen,[['products.index','box-seam','Products'],['categories.index','diagram-3','Categories'],['brands.index','tags','Brands'],['units.index','rulers','Units'],['customers.index','people','Customers'],['suppliers.index','truck','Suppliers'],['imports.index','file-earmark-spreadsheet','Data Import']]],
