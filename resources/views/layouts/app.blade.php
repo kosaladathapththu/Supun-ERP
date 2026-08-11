@@ -35,7 +35,7 @@
           ['salesMenu','cart3','Sales',$salesOpen,[['sales.create','cart-plus','New Sale / POS'],['sales.index','receipt','All Sales'],['sales.index','cash','Cash Sales',['payment_type'=>'cash']],['sales.index','credit-card','Credit Sales',['payment_type'=>'credit']],['quotations.index','file-earmark-text','Quotations'],['sales-orders.index','clipboard-check','Sales Orders'],['delivery-notes.index','truck','Delivery Notes'],['sale-returns.index','arrow-return-left','Sales Returns']]],
           ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
-          ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','cash-coin','Receivables'],['payables.index','wallet2','Payables'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting']]],
+          ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','cash-coin','Receivables'],['payables.index','wallet2','Payables'],['expenses.index','receipt','Expenses'],['accounting.accounts','diagram-3','Chart of Accounts'],['accounting.journals','journal-bookmark','Accounting Journals']]],
           ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
           ['adminMenu','gear','Administration',$adminOpen,[['admin.users.index','people','Staff Users'],['admin.roles.index','person-lock','Roles & Permissions'],['controls.index','shield-check','Control Center']]]
         ];
@@ -59,7 +59,7 @@
 <main class="main">
     @php
         $showBackButton = !request()->routeIs(
-            'dashboard', '*.index', 'accounting.journals', 'statements.index',
+            'dashboard', '*.index', 'accounting.accounts', 'accounting.journals', 'statements.index',
             'reports.index', 'controls.index', 'password.*'
         );
     @endphp
