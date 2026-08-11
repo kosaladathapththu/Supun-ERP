@@ -27,6 +27,7 @@ use App\Http\Controllers\ControlCenterController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\InventoryOperationController;
+use App\Http\Controllers\SalesExchangeController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -63,6 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('sales', SaleController::class)->only(['index','create','store','show'])->middleware('permission:sales.view');
     Route::middleware('permission:sales.view')->group(function(){Route::resource('quotations',QuotationController::class)->only(['index','create','store','show']);Route::post('quotations/{quotation}/convert',[QuotationController::class,'convert'])->name('quotations.convert');Route::get('sales-orders',[SalesOrderController::class,'index'])->name('sales-orders.index');Route::get('sales-orders/{sales_order}',[SalesOrderController::class,'show'])->name('sales-orders.show');Route::get('sales-orders/{sales_order}/deliver',[SalesOrderController::class,'deliver'])->name('sales-orders.deliver');Route::post('sales-orders/{sales_order}/deliver',[SalesOrderController::class,'storeDelivery'])->name('sales-orders.delivery.store');Route::get('delivery-notes',[SalesOrderController::class,'deliveries'])->name('delivery-notes.index');Route::get('delivery-notes/{delivery_note}',[SalesOrderController::class,'showDelivery'])->name('delivery-notes.show');});
     Route::middleware('permission:sales.view')->group(function(){Route::get('sale-returns',[SaleReturnController::class,'index'])->name('sale-returns.index');Route::get('sales/{sale}/return',[SaleReturnController::class,'create'])->name('sale-returns.create');Route::post('sales/{sale}/return',[SaleReturnController::class,'store'])->name('sale-returns.store');Route::get('sale-returns/{sale_return}',[SaleReturnController::class,'show'])->name('sale-returns.show');});
+    Route::middleware('permission:sales.create')->group(function(){Route::get('sales/{sale}/exchange',[SalesExchangeController::class,'create'])->name('sales-exchanges.create');Route::post('sales/{sale}/exchange',[SalesExchangeController::class,'store'])->name('sales-exchanges.store');Route::get('sales-exchanges/{exchange}',[SalesExchangeController::class,'show'])->name('sales-exchanges.show');Route::post('sales/{sale}/void',[SalesExchangeController::class,'void'])->name('sales.void');});
     Route::middleware('permission:sales.view')->group(function(){
         Route::get('receivables/aging',[ReceivableController::class,'aging'])->name('receivables.aging');
         Route::get('receivables/customers/{customer}/ledger',[ReceivableController::class,'ledger'])->name('receivables.ledger');

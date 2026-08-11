@@ -1,3 +1,3 @@
 <?php
 namespace App\Models; use Illuminate\Database\Eloquent\Model;
-class Sale extends Model{protected $guarded=[];protected $casts=['sale_date'=>'datetime','due_date'=>'date'];public function items(){return $this->hasMany(SaleItem::class);}public function customer(){return $this->belongsTo(Customer::class);}public function payments(){return $this->hasMany(SalePayment::class);} }
+class Sale extends Model{protected $guarded=[];protected $casts=['sale_date'=>'datetime','due_date'=>'date','reversed_at'=>'datetime'];public function items(){return $this->hasMany(SaleItem::class);}public function customer(){return $this->belongsTo(Customer::class);}public function payments(){return $this->hasMany(SalePayment::class);}public function returns(){return $this->hasMany(SaleReturn::class);}public function exchanges(){return $this->hasMany(SalesExchange::class,'original_sale_id');} }
