@@ -24,11 +24,30 @@ class SaleController extends Controller
         return view('sales.index', ['sales' => $query->latest('sale_date')->paginate(20)->withQueryString(), 'summary' => $summary]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        return $this->saleForm($request, 'cash');
+    }
+
+    public function cashCreate(Request $request)
+    {
+        return $this->saleForm($request, 'cash');
+    }
+
+    public function creditCreate(Request $request)
+    {
+        return $this->saleForm($request, 'credit');
+    }
+
+    private function saleForm(Request $request, string $saleMode)
+    {
+        $companyId = $request->user()->company_id;
+        $customerQuery = Customer::with('customerType')->where('company_id', $companyId)->where('is_active', 1);
+        if ($saleMode === 'credit') $customerQuery->where('is_walk_in', false)->where('credit_enabled', true);
         return view('sales.pos', [
-            'customers' => Customer::with('customerType')->where('company_id', auth()->user()->company_id)->where('is_active', 1)->orderByDesc('is_walk_in')->orderBy('name')->get(),
-            'products' => Product::with('prices')->where('company_id', auth()->user()->company_id)->where('is_active', 1)->orderByDesc('current_quantity')->orderBy('name')->get(),
+            'customers' => $customerQuery->orderByRaw("CASE WHEN code = 'WALK-IN' THEN 0 ELSE 1 END")->orderBy('name')->get(),
+            'products' => Product::with('prices')->where('company_id', $companyId)->where('is_active', 1)->orderByDesc('current_quantity')->orderBy('name')->get(),
+            'saleMode' => $saleMode,
         ]);
     }
 
@@ -40,6 +59,10 @@ class SaleController extends Controller
             if ($customer->is_walk_in) throw ValidationException::withMessages(['customer_id' => 'Credit sales require a registered customer. Create or select a customer first.']);
             if (!$customer->credit_enabled) throw ValidationException::withMessages(['customer_id' => 'Credit is not enabled for this customer. Enable credit in the customer record first.']);
             $data['paid_amount'] = 0;
+        }
+        if ($data['payment_type'] === 'cash') {
+            $customer = Customer::where('company_id', $request->user()->company_id)->findOrFail($data['customer_id']);
+            if ($customer->is_walk_in && $data['channel'] !== 'retail') throw ValidationException::withMessages(['channel' => 'Walk-in sales must use retail pricing.']);
         }
         $sale = $service->post($data, $request->user());
         return redirect()->route('sales.show', [$sale, 'print' => $request->input('action') === 'print' ? 1 : 0])->with('success', 'Sale posted successfully.');
