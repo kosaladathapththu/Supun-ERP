@@ -61,8 +61,8 @@ class PhaseTwoMasterDataTest extends TestCase
     {
         $this->actingAs(User::where('email', 'admin@supun-erp.local')->firstOrFail());
         $csv = implode("\n", [
-            'supplier_code,supplier_name,supplier_phone,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking',
-            'SUP-CSV,CSV Supplier,0111111111,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1000,1250,1150,2,5,12,yes',
+            'supplier_code,supplier_name,supplier_phone,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking,opening_quantity',
+            'SUP-CSV,CSV Supplier,0111111111,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1000,1250,1150,2,5,12,yes,10',
         ]);
         $file = UploadedFile::fake()->createWithContent('products.csv', $csv);
         $response = $this->post(route('imports.store'), ['file'=>$file]);
@@ -71,6 +71,9 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertSame(1, $batch->valid_rows);
         $this->post(route('imports.confirm', $batch))->assertRedirect(route('imports.show', $batch));
         $this->assertDatabaseHas('products', ['item_code'=>'CSV-001','barcode'=>'001234567890']);
+        $this->assertDatabaseHas('products',['item_code'=>'CSV-001','current_quantity'=>10]);
+        $this->assertDatabaseHas('stock_movements',['movement_type'=>'opening','quantity_in'=>10]);
+        $this->assertDatabaseHas('journal_entries',['source_type'=>ImportBatch::class,'source_id'=>$batch->id]);
         $this->assertDatabaseHas('suppliers', ['code'=>'SUP-CSV']);
         $this->assertSame('imported', $batch->fresh()->status);
     }
