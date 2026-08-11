@@ -22,7 +22,7 @@ class DashboardController extends Controller
             'Overdue receivables' => ['value' => (float) (clone $sales)->where('balance_amount', '>', 0)->whereDate('due_date', '<', today())->sum('balance_amount'), 'money' => true, 'icon' => 'exclamation-circle', 'route' => route('receivables.aging')],
             'Overdue payables' => ['value' => (float) DB::table('supplier_invoices')->where('company_id', $companyId)->where('balance_amount', '>', 0)->whereDate('due_date', '<', today())->sum('balance_amount'), 'money' => true, 'icon' => 'calendar-x', 'route' => route('payables.aging')],
             'Products' => ['value' => DB::table('products')->where('company_id', $companyId)->whereNull('deleted_at')->count(), 'icon' => 'box-seam'],
-            'Customers' => ['value' => DB::table('customers')->where('company_id', $companyId)->whereNull('deleted_at')->count(), 'icon' => 'people'],
+            'Customers' => ['value' => DB::table('customers')->where('company_id', $companyId)->where('is_walk_in', false)->where('code', '!=', 'WALK-IN')->whereNull('deleted_at')->count(), 'icon' => 'people'],
             'Suppliers' => ['value' => DB::table('suppliers')->where('company_id', $companyId)->whereNull('deleted_at')->count(), 'icon' => 'truck'],
             'Low stock items' => ['value' => DB::table('products')->where('company_id', $companyId)->where('is_active', true)->whereColumn('current_quantity', '<=', 'reorder_level')->count(), 'icon' => 'boxes', 'route' => route('stock.index')],
             'Open periods' => ['value' => DB::table('accounting_periods')->where('status', 'open')->count(), 'icon' => 'calendar-check'],
