@@ -79,7 +79,7 @@ class PhaseTwoMasterDataTest extends TestCase
 
         $replenishment=implode("\n",[
             'supplier_code,supplier_name,supplier_phone,supplier_invoice_number,purchase_date,payment_due_date,item_code,product_name,barcode,brand,unit,category,cost_price,retail_price,wholesale_price,minimum_stock,reorder_level,warranty_months,serial_tracking,quantity',
-            'SUP-CSV,CSV Supplier,0111111111,SINV-200,2026-08-11,2026-09-10,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1200,1400,1300,2,5,12,yes,5',
+            'SUP-CSV,CSV Supplier,0111111111,SINV-200,2035-08-11,,CSV-001,Imported Phone,001234567890,Acme,PCS,Phones,1200,1400,1300,2,5,12,yes,5',
         ]);
         $this->post(route('imports.store'),['file'=>UploadedFile::fake()->createWithContent('replenishment.csv',$replenishment)])->assertSessionHasNoErrors();
         $restockBatch=ImportBatch::latest('id')->firstOrFail();$this->post(route('imports.confirm',$restockBatch))->assertSessionHasNoErrors();
