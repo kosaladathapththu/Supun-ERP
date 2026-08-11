@@ -59,12 +59,17 @@ class SaleController extends Controller
             if ($customer->is_walk_in) throw ValidationException::withMessages(['customer_id' => 'Credit sales require a registered customer. Create or select a customer first.']);
             if (!$customer->credit_enabled) throw ValidationException::withMessages(['customer_id' => 'Credit is not enabled for this customer. Enable credit in the customer record first.']);
             $data['paid_amount'] = 0;
+            $data['walk_in_customer_name'] = null;
         }
         if ($data['payment_type'] === 'cash') {
             $customer = Customer::where('company_id', $request->user()->company_id)->findOrFail($data['customer_id']);
             if ($customer->is_walk_in && $data['channel'] !== 'retail') throw ValidationException::withMessages(['channel' => 'Walk-in sales must use retail pricing.']);
+            if (!$customer->is_walk_in) $data['walk_in_customer_name'] = null;
         }
         $sale = $service->post($data, $request->user());
+        if (!empty($data['walk_in_customer_name'])) {
+            $sale->update(['walk_in_customer_name' => trim($data['walk_in_customer_name'])]);
+        }
         return redirect()->route('sales.show', [$sale, 'print' => $request->input('action') === 'print' ? 1 : 0])->with('success', 'Sale posted successfully.');
     }
 
