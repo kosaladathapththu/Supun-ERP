@@ -11,8 +11,15 @@ class SalesExchangeController extends Controller
     {
         $sale = Sale::with(['customer','items.product'])->where('company_id', $request->user()->company_id)->where('status','posted')->findOrFail($sale);
         $returned = SaleReturnItem::selectRaw('sale_item_id,SUM(quantity) quantity')->whereIn('sale_item_id',$sale->items->pluck('id'))->groupBy('sale_item_id')->pluck('quantity','sale_item_id');
-        $products = Product::where('company_id',$request->user()->company_id)->where('is_active',1)->where('current_quantity','>',0)->orderBy('name')->get();
-        return view('sales-exchanges.create', compact('sale','returned','products'));
+        $products = Product::with('prices')->where('company_id',$request->user()->company_id)->where('is_active',1)->where('current_quantity','>',0)->orderBy('name')->get();
+        $exchangeProducts = $products->map(function ($product) use ($sale) {
+            $channelPrice = $product->prices->firstWhere('price_type', $sale->channel);
+            $fallbackPrice = $product->prices->first();
+            return ['id' => $product->id, 'label' => $product->item_code.' — '.$product->name,
+                'price' => (float) ($channelPrice->selling_price ?? $fallbackPrice->selling_price ?? 0),
+                'stock' => (float) $product->current_quantity];
+        })->values();
+        return view('sales-exchanges.create', compact('sale','returned','products','exchangeProducts'));
     }
 
     public function store(Request $request, $sale, SalesExchangeService $service)

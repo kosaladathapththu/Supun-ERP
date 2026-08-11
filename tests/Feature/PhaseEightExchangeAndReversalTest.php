@@ -35,6 +35,7 @@ class PhaseEightExchangeAndReversalTest extends TestCase
     public function test_exchange_returns_old_stock_posts_replacement_and_applies_credit(): void
     {
         $sale = $this->unpaidSale();
+        $this->actingAs($this->user)->get(route('sales-exchanges.create',$sale))->assertOk()->assertSee('Product Exchange');
         $exchange = app(SalesExchangeService::class)->post($sale,['reason'=>'Customer requested upgraded model','returned_items'=>[$sale->items()->first()->id=>['quantity'=>1,'condition'=>'resalable']],'replacement_items'=>[['product_id'=>$this->newProduct->id,'quantity'=>1,'unit_price'=>150]]],$this->user);
 
         $this->assertEquals(10,(float)$this->oldProduct->fresh()->current_quantity);
