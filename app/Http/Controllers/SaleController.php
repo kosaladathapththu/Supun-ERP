@@ -6,6 +6,7 @@ use App\Http\Requests\SaleRequest;
 use App\Models\{Customer, Product, Sale};
 use App\Services\SalePostingService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
@@ -34,7 +35,12 @@ class SaleController extends Controller
     public function store(SaleRequest $request, SalePostingService $service)
     {
         $data = $request->validated();
-        if ($data['payment_type'] === 'credit') $data['paid_amount'] = 0;
+        if ($data['payment_type'] === 'credit') {
+            $customer = Customer::where('company_id', $request->user()->company_id)->findOrFail($data['customer_id']);
+            if ($customer->is_walk_in) throw ValidationException::withMessages(['customer_id' => 'Credit sales require a registered customer. Create or select a customer first.']);
+            if (!$customer->credit_enabled) throw ValidationException::withMessages(['customer_id' => 'Credit is not enabled for this customer. Enable credit in the customer record first.']);
+            $data['paid_amount'] = 0;
+        }
         $sale = $service->post($data, $request->user());
         return redirect()->route('sales.show', [$sale, 'print' => $request->input('action') === 'print' ? 1 : 0])->with('success', 'Sale posted successfully.');
     }
