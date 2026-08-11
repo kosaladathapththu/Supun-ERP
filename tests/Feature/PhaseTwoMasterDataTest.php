@@ -10,6 +10,7 @@ use Illuminate\Http\UploadedFile;
 use App\Models\ImportBatch;
 use Tests\TestCase;
 use ZipArchive;
+use App\Services\XlsxReader;
 
 class PhaseTwoMasterDataTest extends TestCase
 {
@@ -109,8 +110,9 @@ class PhaseTwoMasterDataTest extends TestCase
         $sheet='<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
         foreach($rows as $r=>$values){$sheet.='<row r="'.($r+1).'">';foreach($values as $c=>$value){$column=chr(65+$c);$sheet.='<c r="'.$column.($r+1).'" t="inlineStr"><is><t>'.htmlspecialchars($value,ENT_XML1).'</t></is></c>';}$sheet.='</row>';}$sheet.='</sheetData></worksheet>';
         $zip->addFromString('xl/worksheets/sheet1.xml',$sheet);$zip->close();
+        $this->assertCount(3,app(XlsxReader::class)->rows($path));
         $file = new UploadedFile($path,'products.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',null,true);
-        $this->actingAs($admin)->post(route('imports.store'),['file'=>$file])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('imports.store'),['file'=>$file])->assertSessionHasNoErrors()->assertRedirect();
         $batch=ImportBatch::latest('id')->firstOrFail();
         $this->assertSame(2,$batch->total_rows);$this->assertSame(2,$batch->valid_rows);$this->assertSame('001234567890',$batch->rows()->first()->data['barcode']);
     }
