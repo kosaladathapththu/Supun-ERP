@@ -84,6 +84,17 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const normalizeQuantityInputs = root => root.querySelectorAll?.('input[type="number"]').forEach(input => {
+        if (input.classList.contains('qty') || /(^|\[)(quantity|counted_quantity)(\]|$)/.test(input.name || '')) {
+            input.step = 'any';
+            if (Number(input.min) > 0 && Number(input.min) < 0.01) input.min = '0.01';
+            if (input.value !== '' && Number.isFinite(Number(input.value))) input.value = String(Number(input.value));
+        }
+    });
+    normalizeQuantityInputs(document);
+    new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (node.nodeType === 1) normalizeQuantityInputs(node);
+    }))).observe(document.body, {childList:true, subtree:true});
     const backButton = document.getElementById('global-back-button');
     if (!backButton) return;
     const existingBackLink = [...document.querySelectorAll('.content a')].find(link => link.querySelector('.bi-arrow-left'));
