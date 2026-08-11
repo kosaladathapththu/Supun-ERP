@@ -1,0 +1,3 @@
+<?php
+namespace App\Http\Controllers;use Illuminate\Http\Request;use Illuminate\Support\Facades\Hash;use Illuminate\Validation\Rules\Password;
+class PasswordController extends Controller{public function edit(){return view('auth.change-password');}public function update(Request $r){$data=$r->validate(['current_password'=>['required','current_password'],'password'=>['required','confirmed',Password::min(12)->mixedCase()->numbers()->symbols()]]);$r->user()->forceFill(['password'=>Hash::make($data['password']),'password_changed_at'=>now()])->save();$r->session()->regenerate();return redirect()->route('dashboard')->with('success','Password changed successfully.');}}

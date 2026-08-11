@@ -23,6 +23,8 @@ class PhaseTwoMasterDataTest extends TestCase
     public function test_admin_can_log_in_and_see_dashboard(): void
     {
         $this->post('/login', ['email' => 'admin@supun-erp.local', 'password' => 'ChangeMe!2026'])
+            ->assertRedirect(route('password.edit'));
+        $this->put(route('password.update'), ['current_password'=>'ChangeMe!2026','password'=>'Changed!2026Secure','password_confirmation'=>'Changed!2026Secure'])
             ->assertRedirect(route('dashboard'));
         $this->get(route('dashboard'))->assertOk()->assertSee('Business overview');
     }

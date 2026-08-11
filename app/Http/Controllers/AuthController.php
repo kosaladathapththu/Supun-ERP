@@ -15,6 +15,7 @@ class AuthController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
+        if (!$request->user()->password_changed_at) return redirect()->route('password.edit');
         return redirect()->intended(route('dashboard'));
     }
 

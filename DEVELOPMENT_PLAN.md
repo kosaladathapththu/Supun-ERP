@@ -23,9 +23,9 @@ Laravel provides the HTTP, authentication, authorization and domain-service laye
 7. **Payables/cash/bank/expenses (complete):** GRN-linked supplier invoices, supplier payments/advances, AP ledger and aging, cash/bank expense vouchers and accounting posting. Gate: AP and journal tests pass.
 8. **Returns/notes (in progress):** sale and purchase returns plus credit/debit notes are operational and tested. Exchanges and formal document reversals remain. Gate: stock/accounting reversal tests.
 9. **Statements (complete):** trial balance, P&L, balance sheet, indirect cash flow and GL/subledger reconciliation. Gate: debit=credit, balance-sheet equation and cash reconciliation tests pass.
-10. **Management intelligence:** margins, profitability, stock valuation, CFO dashboard and report center. Gate: drill-down totals agree with sources.
-11. **Document workflows:** quotations, SO, delivery, PO/partial GRN and statuses. Gate: conversion traceability.
-12. **Controls/release:** approvals, audit, period locking, notifications, backup/restore, hardening and full regression. Gate: restore drill and security review.
+10. **Management intelligence (complete):** net sales/margin KPIs, profitability, stock valuation, trend/channel charts, stock attention, CSV exports and a CFO report center. Gate: sales-return-profit and inventory drill-down totals agree with sources.
+11. **Document workflows (complete):** quotation-to-sales-order conversion, partial delivery notes with linked invoices, stock-safe fulfillment, and existing PO/partial-GRN statuses. Gate: two-stage partial delivery and complete conversion traceability tests pass.
+12. **Controls/release (release validation):** four-eyes period approvals, audit logging, notifications, checksum-verified backups, scheduled backup command and release health console are operational. Production gate remains blocked by the PHP/Laravel runtime upgrade and an isolated restore drill.
 
 ## Cross-cutting test strategy
 

@@ -12,7 +12,7 @@ class MainAdminSeeder extends Seeder
     public function run(): void
     {
         $companyId = DB::table('companies')->where('code', 'SUPUN')->value('id');
-        $user = User::updateOrCreate(
+        $user = User::firstOrCreate(
             ['email' => 'admin@supun-erp.local'],
             ['company_id' => $companyId, 'name' => 'Main Administrator', 'password' => Hash::make('ChangeMe!2026'), 'is_active' => true]
         );
