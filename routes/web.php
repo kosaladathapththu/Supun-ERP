@@ -28,6 +28,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\InventoryOperationController;
 use App\Http\Controllers\SalesExchangeController;
+use App\Http\Controllers\CashierSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -77,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->name('admin.')->group(function(){Route::get('users',[UserManagementController::class,'index'])->middleware('permission:users.view')->name('users.index');Route::get('users/create',[UserManagementController::class,'create'])->middleware('permission:users.create')->name('users.create');Route::post('users',[UserManagementController::class,'store'])->middleware('permission:users.create')->name('users.store');Route::get('users/{user}/edit',[UserManagementController::class,'edit'])->middleware('permission:users.update')->name('users.edit');Route::put('users/{user}',[UserManagementController::class,'update'])->middleware('permission:users.update')->name('users.update');Route::get('roles',[RoleManagementController::class,'index'])->middleware('permission:roles.view')->name('roles.index');Route::get('roles/{role}/edit',[RoleManagementController::class,'edit'])->middleware('permission:roles.update')->name('roles.edit');Route::put('roles/{role}',[RoleManagementController::class,'update'])->middleware('permission:roles.update')->name('roles.update');});
     Route::middleware('permission:purchases.view')->group(function(){Route::get('payables',[PayableController::class,'index'])->name('payables.index');Route::get('payables/payment',[PayableController::class,'create'])->name('payables.create');Route::post('payables/payment',[PayableController::class,'store'])->name('payables.store');Route::get('payables/aging',[PayableController::class,'aging'])->name('payables.aging');Route::get('payables/suppliers/{supplier}/ledger',[PayableController::class,'ledger'])->name('payables.ledger');});
     Route::resource('expenses',ExpenseController::class)->only(['index','create','store'])->middleware('permission:accounting.view');
+    Route::middleware('permission:cashiers.view')->prefix('cashier-sessions')->name('cashier-sessions.')->group(function(){Route::get('/',[CashierSessionController::class,'index'])->name('index');Route::post('open',[CashierSessionController::class,'open'])->middleware('permission:cashiers.create')->name('open');Route::post('{session}/close',[CashierSessionController::class,'close'])->middleware('permission:cashiers.post')->name('close');});
     Route::middleware('permission:imports.view')->prefix('imports')->name('imports.')->group(function () {
         Route::get('/', [ImportController::class, 'index'])->name('index');
         Route::get('/template', [ImportController::class, 'template'])->name('template');

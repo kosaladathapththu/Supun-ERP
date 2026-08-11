@@ -10,7 +10,7 @@ class PermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $modules = ['dashboard', 'sales', 'purchases', 'inventory', 'products', 'customers', 'suppliers', 'accounting', 'reports', 'imports', 'users', 'roles', 'audit', 'periods', 'backups', 'settings'];
+        $modules = ['dashboard', 'sales', 'purchases', 'inventory', 'products', 'customers', 'suppliers', 'accounting', 'reports', 'imports', 'cashiers', 'users', 'roles', 'audit', 'periods', 'backups', 'settings'];
         $actions = ['view', 'create', 'update', 'post', 'reverse', 'approve', 'export'];
         foreach ($modules as $module) {
             foreach ($actions as $action) {
