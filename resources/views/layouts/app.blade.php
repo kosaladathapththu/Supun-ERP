@@ -11,6 +11,7 @@
         :root{--navy:#0f1f38;--navy2:#162b4b;--blue:#2563eb;--bg:#f4f7fb;--muted:#6b7280}
         body{background:var(--bg);font-family:Inter,Segoe UI,sans-serif;color:#172033}.sidebar{width:270px;background:var(--navy);height:100vh;position:fixed;inset:0 auto 0 0;color:#fff;overflow-y:scroll;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#405675 var(--navy)}.sidebar::-webkit-scrollbar{width:7px}.sidebar::-webkit-scrollbar-track{background:var(--navy)}.sidebar::-webkit-scrollbar-thumb{background:#405675;border-radius:8px}.sidebar::-webkit-scrollbar-thumb:hover{background:#587194}.brand{padding:24px;border-bottom:1px solid rgba(255,255,255,.1);position:sticky;top:0;background:var(--navy);z-index:2}.brand-mark{width:42px;height:42px;border-radius:12px;background:#2563eb;display:grid;place-items:center;font-size:21px}.nav-section{font-size:.69rem;letter-spacing:.12em;color:#8291a9;padding:20px 22px 7px}.sidebar .nav-link{color:#c8d2e1;border-radius:9px;margin:2px 12px;padding:10px 12px}.sidebar .nav-link:hover,.sidebar .nav-link.active{color:white;background:var(--navy2)}.sidebar .nav-link i{width:25px}.nav-group-toggle{width:calc(100% - 24px);border:0;text-align:left;display:flex;align-items:center}.nav-group-toggle .chevron{margin-left:auto;width:auto!important;transition:transform .2s}.nav-group-toggle:not(.collapsed) .chevron{transform:rotate(180deg)}.nav-submenu{padding:2px 0 7px}.nav-submenu .nav-link{font-size:.91rem;padding:8px 12px 8px 39px;margin-top:0;margin-bottom:0}.nav-submenu .nav-link i{margin-left:-25px}.main{margin-left:270px;min-height:100vh}.topbar{height:72px;background:#fff;border-bottom:1px solid #e7ebf1;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10}.content{padding:28px}.card{border:0;box-shadow:0 4px 18px rgba(15,31,56,.06);border-radius:14px}.page-title{font-weight:700}.metric-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:#eaf1ff;color:#2563eb;font-size:21px}.badge-soft{background:#edf7f1;color:#198754}.table thead th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;background:#f8fafc;border-bottom:1px solid #e8edf3}.btn-primary{background:#2563eb;border-color:#2563eb}.coming{opacity:.45;pointer-events:none}.alert{border:0;border-radius:12px}@media(max-width:991px){.sidebar{position:relative;width:100%;height:auto;max-height:none;overflow:visible}.main{margin-left:0}.topbar{position:relative}}
     </style>
+    <style>.topbar-back{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}</style>
     @stack('styles')
 </head>
 <body>
@@ -56,7 +57,21 @@
     </nav>
 </aside>
 <main class="main">
-    <header class="topbar"><div><div class="fw-semibold">@yield('title', 'Dashboard')</div><small class="text-muted">{{ now()->format('l, d F Y') }}</small></div><div class="d-flex align-items-center gap-3"><div class="text-end"><div class="fw-semibold small">{{ auth()->user()->name }}</div><a class="small text-muted" href="{{ route('password.edit') }}">Change password</a></div><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-light btn-sm" title="Sign out"><i class="bi bi-box-arrow-right"></i></button></form></div></header>
+    @php
+        $showBackButton = !request()->routeIs(
+            'dashboard', '*.index', 'accounting.journals', 'statements.index',
+            'reports.index', 'controls.index', 'password.*'
+        );
+    @endphp
+    <header class="topbar">
+        <div class="d-flex align-items-center gap-3">
+            @if($showBackButton)
+                <button type="button" id="global-back-button" class="btn btn-light topbar-back" title="Go back" aria-label="Go back"><i class="bi bi-arrow-left"></i></button>
+            @endif
+            <div><div class="fw-semibold">@yield('title', 'Dashboard')</div><small class="text-muted">{{ now()->format('l, d F Y') }}</small></div>
+        </div>
+        <div class="d-flex align-items-center gap-3"><div class="text-end"><div class="fw-semibold small">{{ auth()->user()->name }}</div><a class="small text-muted" href="{{ route('password.edit') }}">Change password</a></div><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-light btn-sm" title="Sign out"><i class="bi bi-box-arrow-right"></i></button></form></div>
+    </header>
     <section class="content">
         @if(!auth()->user()->password_changed_at && !request()->routeIs('password.*'))<div class="alert alert-warning"><strong>Security action required:</strong> replace the initial administrator password. <a href="{{ route('password.edit') }}">Change it now</a>.</div>@endif
         @if(session('success'))<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}</div>@endif
@@ -65,5 +80,17 @@
     </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const backButton = document.getElementById('global-back-button');
+    if (!backButton) return;
+    const existingBackLink = [...document.querySelectorAll('.content a')].find(link => link.querySelector('.bi-arrow-left'));
+    if (existingBackLink) backButton.style.display = 'none';
+    backButton.addEventListener('click', () => {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = @json(route('dashboard'));
+    });
+});
+</script>
 @stack('scripts')
 </body></html>
