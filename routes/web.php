@@ -29,6 +29,7 @@ use App\Http\Controllers\RoleManagementController;
 use App\Http\Controllers\InventoryOperationController;
 use App\Http\Controllers\SalesExchangeController;
 use App\Http\Controllers\CashierSessionController;
+use App\Http\Controllers\SerialNumberController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -61,6 +62,7 @@ Route::middleware('auth')->group(function () {
         Route::get('purchase-returns/{purchase_return}',[PurchaseReturnController::class,'show'])->name('purchase-returns.show');
     });
     Route::middleware('permission:inventory.view')->group(function(){Route::get('stock',[StockController::class,'index'])->name('stock.index');Route::get('stock/{product}/ledger',[StockController::class,'ledger'])->name('stock.ledger');});
+    Route::middleware('permission:inventory.view')->group(function(){Route::get('serial-numbers',[SerialNumberController::class,'index'])->name('serial-numbers.index');Route::post('serial-numbers',[SerialNumberController::class,'store'])->middleware('permission:inventory.update')->name('serial-numbers.store');Route::get('serial-numbers/{serialNumber}',[SerialNumberController::class,'show'])->name('serial-numbers.show');Route::put('serial-numbers/{serialNumber}',[SerialNumberController::class,'update'])->middleware('permission:inventory.update')->name('serial-numbers.update');});
     Route::middleware('permission:inventory.update')->prefix('inventory-operations')->name('inventory-operations.')->group(function(){Route::get('/',[InventoryOperationController::class,'index'])->name('index');Route::get('transfer',[InventoryOperationController::class,'transferForm'])->name('transfer');Route::post('transfer',[InventoryOperationController::class,'transfer'])->name('transfer.store');Route::get('adjustment',[InventoryOperationController::class,'adjustmentForm'])->name('adjustment');Route::post('adjustment',[InventoryOperationController::class,'adjustment'])->name('adjustment.store');Route::get('count',[InventoryOperationController::class,'countForm'])->name('count.start');Route::post('count',[InventoryOperationController::class,'startCount'])->name('count.store');Route::get('count/{count}',[InventoryOperationController::class,'editCount'])->name('count.edit');Route::post('count/{count}/post',[InventoryOperationController::class,'postCount'])->name('count.post');});
     Route::get('sales/cash/create',[SaleController::class,'cashCreate'])->middleware('permission:sales.view')->name('sales.cash.create');
     Route::get('sales/credit/create',[SaleController::class,'creditCreate'])->middleware('permission:sales.view')->name('sales.credit.create');
