@@ -46,7 +46,7 @@ class SaleController extends Controller
         if ($saleMode === 'credit') $customerQuery->where('is_walk_in', false)->where('credit_enabled', true);
         return view('sales.pos', [
             'customers' => $customerQuery->orderByRaw("CASE WHEN code = 'WALK-IN' THEN 0 ELSE 1 END")->orderBy('name')->get(),
-            'products' => Product::with('prices')->where('company_id', $companyId)->where('is_active', 1)->orderByDesc('current_quantity')->orderBy('name')->get(),
+            'products' => Product::with(['prices', 'category'])->where('company_id', $companyId)->where('is_active', 1)->orderByDesc('current_quantity')->orderBy('name')->get(),
             'saleMode' => $saleMode,
         ]);
     }
