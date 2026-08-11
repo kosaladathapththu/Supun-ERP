@@ -9,6 +9,7 @@ use App\Models\ProductPrice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Services\XlsxReader;
 
 class ImportController extends Controller
 {
@@ -29,20 +30,25 @@ class ImportController extends Controller
 
     public function store(ImportUploadRequest $request)
     {
-        [$handle, $delimiter] = $this->openCsv($request->file('file')->getRealPath());
-        $headers = array_map(fn ($v) => Str::snake(trim((string) $v)), fgetcsv($handle, 0, $delimiter) ?: []);
+        $uploaded = $request->file('file');
+        $excel = strtolower($uploaded->getClientOriginalExtension()) === 'xlsx';
+        $excelRows = $excel ? app(XlsxReader::class)->rows($uploaded->getRealPath()) : null;
+        if ($excel) $firstRow = array_shift($excelRows) ?: [];
+        else { [$handle, $delimiter] = $this->openCsv($uploaded->getRealPath()); $firstRow = fgetcsv($handle, 0, $delimiter) ?: []; }
+        $headers = array_map(fn ($v) => Str::snake(trim((string) $v)), $firstRow);
         $missing = array_diff(['item_code','product_name','unit','category','cost_price','retail_price','wholesale_price'], $headers);
         if ($missing) return back()->withErrors(['file'=>'Missing required columns: '.implode(', ', $missing)]);
         $batch = ImportBatch::create(['uuid'=>(string)Str::uuid(),'company_id'=>$request->user()->company_id,'user_id'=>$request->user()->id,'type'=>'master_data','original_filename'=>$request->file('file')->getClientOriginalName(),'status'=>'validated']);
         $total=$valid=$invalid=0;
-        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
-            if (++$total > 5000) { fclose($handle); $batch->delete(); return back()->withErrors(['file'=>'The import is limited to 5,000 rows per batch.']); }
+        $nextRow = function() use ($excel,&$excelRows,$handle,$delimiter){return $excel?(count($excelRows)?array_shift($excelRows):false):fgetcsv($handle,0,$delimiter);};
+        while (($values = $nextRow()) !== false) {
+            if (++$total > 5000) { if(!$excel)fclose($handle); $batch->delete(); return back()->withErrors(['file'=>'The import is limited to 5,000 rows per batch.']); }
             $values = array_pad($values, count($headers), null); $data = array_combine($headers, array_slice($values, 0, count($headers)));
             if (!array_filter($data, fn($v)=>trim((string)$v)!=='')) { $total--; continue; }
             $errors = $this->validateRow($data, $request->user()->company_id); $status=$errors?'invalid':'valid'; $errors?$invalid++:$valid++;
             $batch->rows()->create(['row_number'=>$total+1,'data'=>$data,'errors'=>$errors?:null,'status'=>$status]);
         }
-        fclose($handle); $batch->update(['total_rows'=>$total,'valid_rows'=>$valid,'invalid_rows'=>$invalid]);
+        if(!$excel)fclose($handle); $batch->update(['total_rows'=>$total,'valid_rows'=>$valid,'invalid_rows'=>$invalid]);
         DB::table('import_history')->insert(['import_batch_id'=>$batch->id,'user_id'=>$request->user()->id,'action'=>'validated','summary'=>json_encode(compact('total','valid','invalid')),'created_at'=>now(),'updated_at'=>now()]);
         return redirect()->route('imports.show',$batch);
     }
