@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title','Exchange '.$sale->document_number)
 @section('content')
 <div class="mb-4"><a href="{{ route('sales.show',$sale) }}">&larr; {{ $sale->document_number }}</a><h1 class="h3 mt-2">Product Exchange</h1><p class="text-muted">Return old items and issue replacement items in one controlled transaction.</p></div>
@@ -16,4 +16,3 @@ let exchangeLine=0;function addReplacement(){const i=exchangeLine++;const option
 document.querySelector('#add-replacement').addEventListener('click',addReplacement);document.querySelector('#replacement-lines').addEventListener('change',e=>{if(e.target.matches('.exchange-product'))e.target.closest('.replacement-line').querySelector('.exchange-price').value=e.target.selectedOptions[0].dataset.price||0});document.querySelector('#replacement-lines').addEventListener('click',e=>{if(e.target.matches('.remove-line'))e.target.closest('.replacement-line').remove()});addReplacement();
 </script>@endpush
 @endsection
-

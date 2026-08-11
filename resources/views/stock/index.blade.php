@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title','Current Stock')
 @section('content')
 <div class="d-flex justify-content-between mb-4"><div><h1 class="h3 page-title">Current Stock</h1><p class="text-muted">Cached quantities reconciled from immutable stock movements.</p></div><div class="card"><div class="card-body py-2 px-4"><small class="text-muted">Total cost value</small><div class="fw-bold">Rs. {{ number_format($costValue,2) }}</div></div></div></div>
@@ -12,4 +12,3 @@
 <li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="{{ route('products.edit',$product) }}"><i class="bi bi-pencil me-2"></i>Edit product</a></li>
 </ul></div></td></tr>@empty<tr><td colspan="7" class="text-center py-5 text-muted">No products available.</td></tr>@endforelse</tbody></table></div><div class="p-3">{{ $products->links() }}</div></div>
 @endsection
-
