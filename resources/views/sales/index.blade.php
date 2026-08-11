@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', request('payment_type') === 'cash' ? 'Cash Sales' : (request('payment_type') === 'credit' ? 'Credit Sales' : 'All Sales'))
 @section('content')
-<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 page-title mb-1">{{ request('payment_type') === 'cash' ? 'Cash Sales' : (request('payment_type') === 'credit' ? 'Credit Sales' : 'All Sales') }}</h1><p class="text-muted mb-0">Search, filter and open every posted sales invoice.</p></div><a class="btn btn-primary" href="{{ route('sales.create') }}"><i class="bi bi-cart-plus"></i> New Sale</a></div>
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h3 page-title mb-1">{{ request('payment_type') === 'cash' ? 'Cash Sales' : (request('payment_type') === 'credit' ? 'Credit Sales' : 'All Sales') }}</h1><p class="text-muted mb-0">Search, filter and open every posted sales invoice.</p></div><div class="d-flex gap-2"><a class="btn btn-success" href="{{ route('sales.cash.create') }}"><i class="bi bi-cart-plus"></i> Cash Sale</a><a class="btn btn-primary" href="{{ route('sales.credit.create') }}"><i class="bi bi-credit-card"></i> Credit Sale</a></div></div>
 
 <div class="row g-3 mb-4">
 @foreach([['cash','Cash sales','cash','success'],['credit','Credit sales','credit-card','primary']] as [$type,$label,$icon,$colour])
