@@ -73,17 +73,17 @@ class ReceivableXlsxExportService
     private function buildCustomers($sheet, array $report): void
     {
         $sheet->setTitle('Customer Balances');
-        $sheet->mergeCells('A1:G1')->setCellValue('A1','CUSTOMER ACCOUNT SUMMARY');
-        $sheet->mergeCells('A2:G2')->setCellValue('A2','Posted credit invoices, customer payments and current receivables (LKR)');
-        $sheet->fromArray(['Customer code','Customer name','Total invoiced','Paid amount','Invoice outstanding','Paid - not allocated','Current receivable'],null,'A4');
+        $sheet->mergeCells('A1:E1')->setCellValue('A1','CUSTOMER ACCOUNT SUMMARY');
+        $sheet->mergeCells('A2:E2')->setCellValue('A2','Posted credit invoices, paid amounts and current receivables (LKR)');
+        $sheet->fromArray(['Customer code','Customer name','Total invoiced','Paid amount','Current receivable'],null,'A4');
         $row=5;
-        foreach($report['customers'] as $customer){$sheet->setCellValueExplicit('A'.$row,(string)$customer->code,DataType::TYPE_STRING);$sheet->setCellValue('B'.$row,$customer->name);$sheet->setCellValue('C'.$row,(float)$customer->total_invoiced);$sheet->setCellValue('D'.$row,(float)$customer->total_received);$sheet->setCellValue('E'.$row,(float)$customer->outstanding_balance);$sheet->setCellValue('F'.$row,(float)$customer->available_advance);$sheet->setCellValue('G'.$row,(float)$customer->current_receivable);$row++;}
-        $lastData=max(4,$row-1);$sheet->setCellValue('A'.$row,'TOTAL')->mergeCells('A'.$row.':B'.$row);$sheet->setCellValue('C'.$row,$report['totals']['invoiced']);$sheet->setCellValue('D'.$row,$report['totals']['received']);$sheet->setCellValue('E'.$row,$report['totals']['outstanding']);$sheet->setCellValue('F'.$row,$report['totals']['advances']);$sheet->setCellValue('G'.$row,$report['totals']['current_receivable']);
-        $sheet->getStyle('A1:G1')->applyFromArray($this->titleStyle(19));$sheet->getStyle('A2:G2')->applyFromArray(['font'=>['italic'=>true,'color'=>['rgb'=>'526174']]]);$sheet->getStyle('A4:G4')->applyFromArray($this->headerStyle());$sheet->getStyle('A'.$row.':G'.$row)->applyFromArray($this->totalStyle());
-        if($lastData>=5){$sheet->getStyle('A5:G'.$lastData)->applyFromArray($this->bodyBorders());$sheet->setAutoFilter('A4:G'.$lastData);$sheet->getStyle('G5:G'.$lastData)->getFont()->getColor()->setRGB(self::RED);}
-        $sheet->getStyle('C5:G'.$row)->getNumberFormat()->setFormatCode(self::MONEY);$sheet->freezePane('A5');
-        foreach(['A'=>18,'B'=>34,'C'=>18,'D'=>18,'E'=>20,'F'=>18,'G'=>20] as $column=>$width)$sheet->getColumnDimension($column)->setWidth($width);
-        $this->configureSheet($sheet,PageSetup::ORIENTATION_LANDSCAPE,'A1:G'.$row);
+        foreach($report['customers'] as $customer){$sheet->setCellValueExplicit('A'.$row,(string)$customer->code,DataType::TYPE_STRING);$sheet->setCellValue('B'.$row,$customer->name);$sheet->setCellValue('C'.$row,(float)$customer->total_invoiced);$sheet->setCellValue('D'.$row,(float)$customer->total_received);$sheet->setCellValue('E'.$row,(float)$customer->current_receivable);$row++;}
+        $lastData=max(4,$row-1);$sheet->setCellValue('A'.$row,'TOTAL')->mergeCells('A'.$row.':B'.$row);$sheet->setCellValue('C'.$row,$report['totals']['invoiced']);$sheet->setCellValue('D'.$row,$report['totals']['received']);$sheet->setCellValue('E'.$row,$report['totals']['current_receivable']);
+        $sheet->getStyle('A1:E1')->applyFromArray($this->titleStyle(19));$sheet->getStyle('A2:E2')->applyFromArray(['font'=>['italic'=>true,'color'=>['rgb'=>'526174']]]);$sheet->getStyle('A4:E4')->applyFromArray($this->headerStyle());$sheet->getStyle('A'.$row.':E'.$row)->applyFromArray($this->totalStyle());
+        if($lastData>=5){$sheet->getStyle('A5:E'.$lastData)->applyFromArray($this->bodyBorders());$sheet->setAutoFilter('A4:E'.$lastData);$sheet->getStyle('E5:E'.$lastData)->getFont()->getColor()->setRGB(self::RED);}
+        $sheet->getStyle('C5:E'.$row)->getNumberFormat()->setFormatCode(self::MONEY);$sheet->freezePane('A5');
+        foreach(['A'=>18,'B'=>38,'C'=>20,'D'=>20,'E'=>20] as $column=>$width)$sheet->getColumnDimension($column)->setWidth($width);
+        $this->configureSheet($sheet,PageSetup::ORIENTATION_LANDSCAPE,'A1:E'.$row);
     }
 
     private function buildReceipts($sheet, array $report): void
