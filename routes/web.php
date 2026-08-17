@@ -70,7 +70,9 @@ Route::middleware('auth')->group(function () {
     Route::get('backdated-invoices',[BackdatedInvoiceController::class,'index'])->middleware('permission:backdated_invoices.view')->name('backdated-invoices.index');
     Route::get('backdated-invoices/create',[BackdatedInvoiceController::class,'create'])->middleware('permission:backdated_invoices.create')->name('backdated-invoices.create');
     Route::post('backdated-invoices',[BackdatedInvoiceController::class,'store'])->middleware('permission:backdated_invoices.create')->name('backdated-invoices.store');
+    Route::post('backdated-invoices/window/request',[BackdatedInvoiceController::class,'requestWindow'])->middleware('permission:backdated_invoices.create')->name('backdated-invoices.window.request');
     Route::post('backdated-invoices/window',[BackdatedInvoiceController::class,'updateWindow'])->middleware('permission:backdated_invoices.update')->name('backdated-invoices.window');
+    Route::post('backdated-invoices/window/reject',[BackdatedInvoiceController::class,'rejectWindow'])->middleware('permission:backdated_invoices.update')->name('backdated-invoices.window.reject');
     Route::post('backdated-invoices/{backdatedInvoice}/approve',[BackdatedInvoiceController::class,'approve'])->middleware('permission:backdated_invoices.approve')->name('backdated-invoices.approve');
     Route::post('backdated-invoices/{backdatedInvoice}/reject',[BackdatedInvoiceController::class,'reject'])->middleware('permission:backdated_invoices.approve')->name('backdated-invoices.reject');
     Route::resource('sales', SaleController::class)->only(['index','create','store','show'])->middleware('permission:sales.view');
