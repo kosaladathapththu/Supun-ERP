@@ -63,7 +63,7 @@ class ReceivableXlsxExportService
     {
         $rows=[1=>[['RECEIPT HISTORY',1],['',1],['',1],['',1],['',1],['',1],['',1],['',1]],2=>[['All posted customer receipts for the selected report scope',2],['',2],['',2],['',2],['',2],['',2],['',2],['',2]],4=>[['Receipt',5],['Date',5],['Customer code',5],['Customer',5],['Payment method',5],['Reference',5],['Amount',5],['Unapplied',5]]];
         $row=5;
-        foreach($report['receipts'] as $receipt)$rows[$row++]=[[(string)$receipt->receipt_number,6],[$receipt->receipt_date->format('Y-m-d'),7],[(string)$receipt->customer->code,6],[(string)$receipt->customer->name,6],[str($receipt->payment_method)->headline()->toString(),6],[(string)($receipt->reference??''),6],[(float)$receipt->amount,8],[(float)$receipt->unapplied_amount,8]];
+        foreach($report['receipts'] as $receipt)$rows[$row++]=[[(string)$receipt->receipt_number,6],[($receipt->receipt_date->copy()->startOfDay()->timestamp/86400)+25569,7],[(string)$receipt->customer->code,6],[(string)$receipt->customer->name,6],[str($receipt->payment_method)->headline()->toString(),6],[(string)($receipt->reference??''),6],[(float)$receipt->amount,8],[(float)$receipt->unapplied_amount,8]];
         $last=max(4,$row-1); $rows[$row]=[['TOTAL',9],['',9],['',9],['',9],['',9],['',9],[(float)$report['receipts']->sum('amount'),10],[(float)$report['receipts']->sum('unapplied_amount'),10]];
         return ['name'=>'Receipt History','xml'=>$this->sheetXml($rows,[22,15,18,34,22,24,18,18],['A1:H1','A2:H2','A'.$row.':F'.$row],'A4:H'.$last,4,'landscape')];
     }
@@ -74,7 +74,7 @@ class ReceivableXlsxExportService
         $body=''; foreach($rows as $r=>$cells){$body.='<row r="'.$r.'" ht="'.(in_array($r,[1,2,5,6],true)?26:20).'" customHeight="1">';foreach($cells as $c=>[$value,$style])$body.=$this->cell($c,$r,$value,$style);$body.='</row>';}
         $mergeXml=$merges?'<mergeCells count="'.count($merges).'">'.implode('',array_map(fn($x)=>'<mergeCell ref="'.$x.'"/>',$merges)).'</mergeCells>':'';
         $view=$freeze?'<sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="'.$freeze.'" topLeftCell="A'.($freeze+1).'" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>':'<sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews>';
-        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'.$view.'<sheetFormatPr defaultRowHeight="20"/><cols>'.$cols.'</cols><sheetData>'.$body.'</sheetData>'.$mergeXml.($filter?'<autoFilter ref="'.$filter.'"/>':'').'<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="'.$orientation.'" paperSize="9" fitToWidth="1" fitToHeight="0"/><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr></worksheet>';
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'.$view.'<sheetFormatPr defaultRowHeight="20"/><cols>'.$cols.'</cols><sheetData>'.$body.'</sheetData>'.$mergeXml.($filter?'<autoFilter ref="'.$filter.'"/>':'').'<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="'.$orientation.'" paperSize="9" fitToWidth="1" fitToHeight="0"/></worksheet>';
     }
 
     private function cell(int $column,int $row,mixed $value,int $style):string
