@@ -22,7 +22,8 @@
         .sidebar .nav-submenu:before{content:"";position:absolute;left:28px;top:4px;bottom:12px;width:1px;background:#29415f}
         .sidebar .nav-submenu .nav-link{position:relative;line-height:1.25;white-space:normal}
         .sidebar .nav-submenu .nav-link:hover{color:#bae6fd;background:#193354}
-        .sidebar .nav-submenu .nav-link.active{color:#fff;background:#2563eb;box-shadow:inset 4px 0 #93c5fd,0 4px 12px rgba(37,99,235,.22);font-weight:650;transform:none}
+        .sidebar .nav-submenu .nav-link.active{color:#0f2f57;background:#dbeafe;box-shadow:inset 4px 0 #38bdf8,0 4px 12px rgba(56,189,248,.14);font-weight:700;transform:none}
+        .sidebar .nav-submenu .nav-link.active i{color:#0369a1}
         .sidebar nav>.nav-link.active:not(.pos-nav){color:#fff;background:#2563eb;box-shadow:inset 4px 0 #93c5fd}
         .sidebar .pos-nav{margin:10px 12px 14px;padding:12px;color:#6ee7b7!important;background:rgba(5,150,105,.12)!important;border:1px solid rgba(52,211,153,.35);font-weight:750;box-shadow:none!important}
         .sidebar .pos-nav:hover{color:#fff!important;background:#047857!important;transform:translateY(-1px)}
