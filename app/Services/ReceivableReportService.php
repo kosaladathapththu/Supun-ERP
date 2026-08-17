@@ -14,7 +14,7 @@ class ReceivableReportService
             ->when($customerId, fn ($query) => $query->whereKey($customerId))
             ->withSum(['sales as total_invoiced' => fn ($query) => $query->where('status', 'posted')->where('payment_type', 'credit')], 'grand_total')
             ->withSum(['sales as outstanding_balance' => fn ($query) => $query->where('status', 'posted')->where('payment_type', 'credit')], 'balance_amount')
-            ->withSum(['receipts as total_received' => fn ($query) => $query->where('status', 'posted')], 'amount')
+            ->withSum(['sales as total_received' => fn ($query) => $query->where('status', 'posted')->where('payment_type', 'credit')], 'paid_amount')
             ->withSum(['receipts as available_advance' => fn ($query) => $query->where('status', 'posted')], 'unapplied_amount')
             ->orderBy('name')->get();
 

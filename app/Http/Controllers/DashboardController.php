@@ -13,13 +13,13 @@ class DashboardController extends Controller
         $sales = DB::table('sales')->where('company_id', $companyId)->where('status', 'posted');
         $receivable = (float) (clone $sales)->sum('balance_amount');
         $payable = (float) DB::table('supplier_invoices')->where('company_id', $companyId)->sum('balance_amount');
-        $customerPayments = (float) DB::table('customer_receipts')->where('company_id', $companyId)->where('status', 'posted')->sum('amount');
+        $customerPayments = (float) (clone $sales)->where('payment_type', 'credit')->sum('paid_amount');
 
         $metrics = [
             "Today's sales" => ['value' => (float) (clone $sales)->whereDate('sale_date', today())->sum('grand_total'), 'money' => true, 'icon' => 'cart-check', 'route' => route('sales.index')],
             "Today's gross profit" => ['value' => (float) (clone $sales)->whereDate('sale_date', today())->sum('gross_profit'), 'money' => true, 'icon' => 'graph-up-arrow', 'route' => route('reports.profitability')],
             'Customer receivables' => ['value' => $receivable, 'money' => true, 'icon' => 'cash-coin', 'route' => route('receivables.index')],
-            'Customer payments received' => ['value' => $customerPayments, 'money' => true, 'icon' => 'cash-stack', 'route' => route('receivables.index')],
+            'Credit sales paid amount' => ['value' => $customerPayments, 'money' => true, 'icon' => 'cash-stack', 'route' => route('receivables.index')],
             'Supplier payables' => ['value' => $payable, 'money' => true, 'icon' => 'wallet2', 'route' => route('payables.index')],
             'Overdue receivables' => ['value' => (float) (clone $sales)->where('balance_amount', '>', 0)->whereDate('due_date', '<', today())->sum('balance_amount'), 'money' => true, 'icon' => 'exclamation-circle', 'route' => route('receivables.aging')],
             'Overdue payables' => ['value' => (float) DB::table('supplier_invoices')->where('company_id', $companyId)->where('balance_amount', '>', 0)->whereDate('due_date', '<', today())->sum('balance_amount'), 'money' => true, 'icon' => 'calendar-x', 'route' => route('payables.aging')],
