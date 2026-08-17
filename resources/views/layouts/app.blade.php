@@ -13,6 +13,7 @@
     </style>
     <style>
         .topbar-back{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+        .approval-bell{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;position:relative}.approval-badge{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:.65rem;font-weight:700;display:grid;place-items:center}.approval-menu{width:350px;max-width:calc(100vw - 24px);padding:0;border:0;box-shadow:0 14px 40px rgba(15,31,56,.18);border-radius:12px;overflow:hidden}.approval-item{display:block;padding:12px 15px;border-top:1px solid #edf0f4;color:#172033;text-decoration:none}.approval-item:hover{background:#f5f8fc}.approval-item small{display:block;color:#6b7280;margin-top:2px}
         .sidebar .nav-link{margin-top:3px;margin-bottom:3px;transition:background-color .16s,color .16s,transform .16s}
         .sidebar .nav-link:hover{color:#fff;background:#1b3458;transform:translateX(2px)}
         .sidebar .nav-group-toggle{border:1px solid transparent;font-weight:600}
@@ -126,6 +127,14 @@
             'dashboard', '*.index', 'accounting.accounts', 'accounting.journals', 'statements.index',
             'reports.index', 'controls.index', 'password.*'
         );
+        $canApproveBackdated = auth()->user()->hasPermission('backdated_invoices.approve');
+        $pendingBackdated = collect();
+        $pendingWindowRequest = null;
+        if ($canApproveBackdated) {
+            $pendingBackdated = \App\Models\BackdatedInvoiceRequest::with('requester')->where('company_id',auth()->user()->company_id)->where('status','pending')->latest('submitted_at')->limit(5)->get();
+            $pendingWindowRequest = \App\Models\BackdatedInvoiceSetting::with('requester')->where('company_id',auth()->user()->company_id)->whereNotNull('requested_days')->first();
+        }
+        $approvalNotificationCount = $pendingBackdated->count() + ($pendingWindowRequest ? 1 : 0);
     @endphp
     <header class="topbar">
         <div class="d-flex align-items-center gap-3">
@@ -134,7 +143,28 @@
             @endif
             <div><div class="fw-semibold">@yield('title', 'Dashboard')</div><small class="text-muted">{{ now()->format('l, d F Y') }}</small></div>
         </div>
-        <div class="d-flex align-items-center gap-3"><div class="text-end"><div class="fw-semibold small">{{ auth()->user()->name }}</div><a class="small text-muted" href="{{ route('password.edit') }}">Change password</a></div><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-light btn-sm" title="Sign out"><i class="bi bi-box-arrow-right"></i></button></form></div>
+        <div class="d-flex align-items-center gap-3">
+            @if($canApproveBackdated)
+            <div class="dropdown">
+                <button class="btn btn-light approval-bell" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Approval notifications" aria-label="Approval notifications">
+                    <i class="bi bi-bell{{ $approvalNotificationCount ? '-fill' : '' }}"></i>
+                    @if($approvalNotificationCount)<span class="approval-badge">{{ $approvalNotificationCount > 99 ? '99+' : $approvalNotificationCount }}</span>@endif
+                </button>
+                <div class="dropdown-menu dropdown-menu-end approval-menu">
+                    <div class="p-3 d-flex justify-content-between align-items-center"><strong>Approvals</strong>@if($approvalNotificationCount)<span class="badge text-bg-danger">{{ $approvalNotificationCount }} pending</span>@endif</div>
+                    @if($pendingWindowRequest)
+                        <a class="approval-item" href="{{ route('admin.backdated-invoices.index') }}"><div class="d-flex gap-2"><i class="bi bi-calendar-range text-warning"></i><div><strong>Date-range request</strong><small>{{ $pendingWindowRequest->requester?->name ?? 'Accountant' }} requested {{ $pendingWindowRequest->requested_days }} days.</small></div></div></a>
+                    @endif
+                    @foreach($pendingBackdated as $pendingApproval)
+                        <a class="approval-item" href="{{ route('admin.backdated-invoices.show',$pendingApproval) }}"><div class="d-flex gap-2"><i class="bi bi-receipt text-primary"></i><div><strong>{{ $pendingApproval->request_number }}</strong><small>{{ $pendingApproval->requester?->name ?? 'Staff user' }} · Rs. {{ number_format($pendingApproval->total_amount,2) }}</small></div></div></a>
+                    @endforeach
+                    @if(!$approvalNotificationCount)<div class="p-4 text-center text-muted"><i class="bi bi-check-circle d-block fs-4 mb-1"></i>No approvals waiting.</div>@endif
+                    <div class="p-2 border-top bg-light"><a class="btn btn-sm btn-primary w-100" href="{{ route('admin.backdated-invoices.index') }}">Open Approval Center</a></div>
+                </div>
+            </div>
+            @endif
+            <div class="text-end"><div class="fw-semibold small">{{ auth()->user()->name }}</div><a class="small text-muted" href="{{ route('password.edit') }}">Change password</a></div><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-light btn-sm" title="Sign out"><i class="bi bi-box-arrow-right"></i></button></form>
+        </div>
     </header>
     <section class="content">
         @if(!auth()->user()->password_changed_at && !request()->routeIs('password.*'))<div class="alert alert-warning"><strong>Security action required:</strong> replace the initial administrator password. <a href="{{ route('password.edit') }}">Change it now</a>.</div>@endif
