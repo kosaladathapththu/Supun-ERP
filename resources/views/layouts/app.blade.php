@@ -21,7 +21,7 @@
         @php
             $masterOpen=request()->routeIs('products.*','categories.*','brands.*','units.*','customers.*','suppliers.*','imports.*');
             $posOpen=request()->routeIs('sales.create','sales.cash.create','sales.credit.create');
-            $salesOpen=(request()->routeIs('sales.*','quotations.*','sales-orders.*','delivery-notes.*','sale-returns.*','sales-exchanges.*')&&!$posOpen);
+            $salesOpen=(request()->routeIs('sales.*','backdated-invoices.*','quotations.*','sales-orders.*','delivery-notes.*','sale-returns.*','sales-exchanges.*')&&!$posOpen);
             $purchaseOpen=request()->routeIs('purchase-orders.*','grn.*','purchase-returns.*');
             $inventoryOpen=request()->routeIs('stock.*','inventory-operations.*','serial-numbers.*');
             $financeOpen=request()->routeIs('cashier-sessions.*','receivables.*','payables.*','expenses.*','accounting.*');
@@ -34,7 +34,7 @@
         @php
         $groups=[
           ['masterMenu','database','Master Data',$masterOpen,[['products.index','box-seam','Products'],['categories.index','diagram-3','Categories'],['brands.index','tags','Brands'],['units.index','rulers','Units'],['customers.index','people','Customers'],['suppliers.index','truck','Suppliers'],['imports.index','file-earmark-spreadsheet','Data Import']]],
-          ['salesMenu','cart3','Sales',$salesOpen,[['sales.index','receipt','All Sales'],['sales.index','cash','Cash Sale History',['payment_type'=>'cash']],['sales.index','credit-card','Credit Sale History',['payment_type'=>'credit']],['quotations.index','file-earmark-text','Quotations'],['sales-orders.index','clipboard-check','Sales Orders'],['delivery-notes.index','truck','Delivery Notes'],['sale-returns.index','arrow-return-left','Sales Returns']]],
+          ['salesMenu','cart3','Sales',$salesOpen,[['sales.index','receipt','All Sales'],['backdated-invoices.index','calendar-check','Backdated Invoices'],['sales.index','cash','Cash Sale History',['payment_type'=>'cash']],['sales.index','credit-card','Credit Sale History',['payment_type'=>'credit']],['quotations.index','file-earmark-text','Quotations'],['sales-orders.index','clipboard-check','Sales Orders'],['delivery-notes.index','truck','Delivery Notes'],['sale-returns.index','arrow-return-left','Sales Returns']]],
           ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['serial-numbers.index','upc-scan','Serials & Warranty'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
           ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','person-lines-fill','Receivables — Customer Ledgers'],['payables.index','truck-flatbed','Payables — Supplier Ledgers'],['accounting.accounts','journal-text','General Account Ledgers'],['stock.index','boxes','Stock Ledgers'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting Journals']]],
