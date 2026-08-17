@@ -10,4 +10,14 @@ class ControlCenterController extends Controller
  public function review(Request $r,$approval){abort_unless($r->user()->hasPermission('periods.approve'),403);$approval=ApprovalRequest::where('company_id',$r->user()->company_id)->where('status','pending')->findOrFail($approval);if((int)$approval->requested_by===(int)$r->user()->id)throw ValidationException::withMessages(['approval'=>'The requester cannot review their own control request.']);$data=$r->validate(['decision'=>'required|in:approved,rejected','review_notes'=>'nullable|string|max:1000']);DB::transaction(function()use($approval,$data,$r){if($data['decision']==='approved'&&$approval->subject_type===AccountingPeriod::class){$period=AccountingPeriod::lockForUpdate()->findOrFail($approval->subject_id);if($approval->approval_type==='period_close')$period->update(['status'=>'closed','closed_at'=>now(),'closed_by'=>$r->user()->id]);else $period->update(['status'=>'open','reopened_at'=>now(),'reopened_by'=>$r->user()->id,'reopen_reason'=>$approval->reason]);}$approval->update(['status'=>$data['decision'],'reviewed_by'=>$r->user()->id,'reviewed_at'=>now(),'review_notes'=>$data['review_notes']??null]);});return back()->with('success','Approval decision recorded.');}
  public function audit(Request $r){$logs=AuditLog::with('user')->where('company_id',$r->user()->company_id)->latest('occurred_at')->paginate(30);return view('controls.audit',compact('logs'));}
  public function backup(Request $r,DatabaseBackupService $s){abort_unless($r->user()->hasPermission('backups.create'),403);$run=$s->create($r->user());return back()->with('success',"Verified backup {$run->filename} created.");}
+ public function downloadBackup(Request $r,$backup){
+  abort_unless($r->user()->hasPermission('backups.create'),403);
+  $run=BackupRun::where('company_id',$r->user()->company_id)->where('status','completed')->findOrFail($backup);
+  abort_unless($run->filename===basename($run->filename),404);
+  $directory=realpath(storage_path('app/backups'));
+  $path=realpath(storage_path('app/backups/'.$run->filename));
+  abort_unless($directory&&$path&&str_starts_with($path,$directory.DIRECTORY_SEPARATOR)&&is_file($path)&&is_readable($path),404,'The backup file is not available.');
+  if($run->checksum){abort_unless(hash_equals($run->checksum,hash_file('sha256',$path)),409,'The backup integrity check failed. Create a new backup before downloading.');}
+  return response()->download($path,$run->filename,['Content-Type'=>'application/sql','X-Content-Type-Options'=>'nosniff']);
+ }
 }
