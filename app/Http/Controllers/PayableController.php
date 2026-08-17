@@ -13,9 +13,30 @@ class PayableController extends Controller
     {
         $companyId = $request->user()->company_id;
 
+        $suppliers = Supplier::where('company_id', $companyId)
+            ->where('is_active', 1)
+            ->addSelect([
+                'total_invoiced' => SupplierInvoice::selectRaw('COALESCE(SUM(total_amount),0)')
+                    ->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+                'total_paid' => SupplierPayment::selectRaw('COALESCE(SUM(amount),0)')
+                    ->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+                'current_payable' => SupplierInvoice::selectRaw('COALESCE(SUM(balance_amount),0)')
+                    ->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+            ])
+            ->orderBy('name')
+            ->get();
+
+        $reportTotals = [
+            'invoiced' => (float) $suppliers->sum('total_invoiced'),
+            'paid' => (float) $suppliers->sum('total_paid'),
+            'payable' => (float) $suppliers->sum('current_payable'),
+            'credits' => (float) DebitNote::where('company_id', $companyId)->where('status', '!=', 'voided')->sum('amount'),
+        ];
+
         return view('payables.index', [
             'invoices' => SupplierInvoice::with(['supplier', 'grn'])->where('company_id', $companyId)->latest('invoice_date')->paginate(20),
-            'suppliers' => Supplier::where('company_id', $companyId)->where('is_active', 1)->orderBy('name')->get(),
+            'suppliers' => $suppliers,
+            'reportTotals' => $reportTotals,
         ]);
     }
 
