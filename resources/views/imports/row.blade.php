@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title',($editing?'Edit':'View').' Import Row')
+@section('content')
+<div class="mb-4"><a href="{{ route('imports.show',$batch) }}" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Import preview</a><h1 class="h3 page-title mt-2">{{ $editing?'Edit':'View' }} Product Row {{ $row->row_number }}</h1><p class="text-muted">{{ $batch->original_filename }}</p></div>
+<form method="POST" action="{{ $editing?route('imports.rows.update',[$batch,$row]):'#' }}">@if($editing)@csrf @method('PUT')@endif<div class="card"><div class="card-body"><div class="row g-3">@foreach($headers as $header)<div class="col-md-4"><label class="form-label">{{ str($header)->headline() }}</label><input class="form-control" name="{{ $header }}" value="{{ old($header,$row->data[$header]??'') }}" @disabled(!$editing)></div>@endforeach</div>@if($row->errors)<div class="alert alert-danger mt-4 mb-0">{{ implode('; ',$row->errors) }}</div>@endif</div><div class="card-footer bg-white p-3 d-flex gap-2">@if($editing)<button class="btn btn-primary">Save Changes</button>@endif<a href="{{ route('imports.show',$batch) }}" class="btn btn-outline-secondary">{{ $editing?'Cancel':'Back' }}</a></div></div></form>
+@endsection

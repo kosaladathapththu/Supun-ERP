@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ImportUploadRequest;
-use App\Models\ImportBatch;
+use App\Models\{ImportBatch,ImportRow};
 use App\Models\Product;
 use App\Models\ProductPrice;
 use Illuminate\Http\Request;
@@ -91,6 +91,14 @@ class ImportController extends Controller
         });
         return redirect()->route('imports.show',$batch)->with('success',"{$batch->valid_rows} rows imported successfully.");
     }
+
+    public function viewRow(Request $request,ImportBatch $batch,ImportRow $row){$this->ownedRow($request,$batch,$row);return view('imports.row',compact('batch','row')+['headers'=>self::HEADERS,'editing'=>false]);}
+    public function editRow(Request $request,ImportBatch $batch,ImportRow $row){$this->ownedRow($request,$batch,$row);abort_unless($batch->status==='validated',422);return view('imports.row',compact('batch','row')+['headers'=>self::HEADERS,'editing'=>true]);}
+    public function updateRow(Request $request,ImportBatch $batch,ImportRow $row){$this->ownedRow($request,$batch,$row);abort_unless($batch->status==='validated',422);$data=[];foreach(self::HEADERS as $header)$data[$header]=trim((string)$request->input($header,''));$errors=$this->validateRow($data,$batch->company_id);$row->update(['data'=>$data,'errors'=>$errors?:null,'status'=>$errors?'invalid':'valid']);$this->refreshCounts($batch);return redirect()->route('imports.show',$batch)->with('success','Import row updated.');}
+    public function deleteRow(Request $request,ImportBatch $batch,ImportRow $row){$this->ownedRow($request,$batch,$row);abort_unless($batch->status==='validated',422);$row->delete();$this->refreshCounts($batch);return back()->with('success','Product row removed from this import.');}
+    public function cancel(Request $request,ImportBatch $batch){abort_unless($batch->company_id===$request->user()->company_id,404);abort_unless($batch->status==='validated',422);$batch->update(['status'=>'cancelled']);return redirect()->route('imports.index')->with('success','Import cancelled. No products or stock were changed.');}
+    private function ownedRow(Request $request,ImportBatch $batch,ImportRow $row):void{abort_unless($batch->company_id===$request->user()->company_id&&$row->import_batch_id===$batch->id,404);}
+    private function refreshCounts(ImportBatch $batch):void{$batch->update(['total_rows'=>$batch->rows()->count(),'valid_rows'=>$batch->rows()->where('status','valid')->count(),'invalid_rows'=>$batch->rows()->where('status','invalid')->count()]);}
 
     private function validateRow(array $d, int $companyId): array
     {

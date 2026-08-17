@@ -102,6 +102,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/template', [ImportController::class, 'template'])->name('template');
         Route::post('/', [ImportController::class, 'store'])->name('store');
         Route::get('/{batch}', [ImportController::class, 'show'])->name('show');
+        Route::get('/{batch}/rows/{row}', [ImportController::class, 'viewRow'])->name('rows.show');
+        Route::get('/{batch}/rows/{row}/edit', [ImportController::class, 'editRow'])->name('rows.edit');
+        Route::put('/{batch}/rows/{row}', [ImportController::class, 'updateRow'])->middleware('permission:imports.create')->name('rows.update');
+        Route::delete('/{batch}/rows/{row}', [ImportController::class, 'deleteRow'])->middleware('permission:imports.create')->name('rows.destroy');
+        Route::post('/{batch}/cancel', [ImportController::class, 'cancel'])->middleware('permission:imports.create')->name('cancel');
         Route::post('/{batch}/confirm', [ImportController::class, 'confirm'])->middleware('permission:imports.create')->name('confirm');
     });
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
