@@ -30,6 +30,14 @@ class PhaseFiveReceivablesTest extends TestCase
     {
         $sale=$this->creditSale();$this->post(route('receivables.store'),['customer_id'=>$this->customerId,'receipt_date'=>now()->toDateString(),'payment_method'=>'bank_transfer','amount'=>150,'allocations'=>[$sale->id=>100]])->assertSessionHasNoErrors();$this->assertDatabaseHas('customer_receipts',['amount'=>150,'allocated_amount'=>100,'unapplied_amount'=>50]);$this->assertSame('paid',$sale->fresh()->payment_status);
     }
+    public function test_receipt_without_manual_lines_is_applied_to_oldest_invoice():void
+    {
+        $sale=$this->creditSale();$this->post(route('receivables.store'),['customer_id'=>$this->customerId,'receipt_date'=>now()->toDateString(),'payment_method'=>'cash','amount'=>60,'allocations'=>[$sale->id=>0]])->assertSessionHasNoErrors();$this->assertDatabaseHas('customer_receipts',['amount'=>60,'allocated_amount'=>60,'unapplied_amount'=>0]);$this->assertEquals(40,(float)$sale->fresh()->balance_amount);
+    }
+    public function test_receipt_can_be_deliberately_kept_as_advance():void
+    {
+        $sale=$this->creditSale();$this->post(route('receivables.store'),['customer_id'=>$this->customerId,'receipt_date'=>now()->toDateString(),'payment_method'=>'cash','amount'=>60,'keep_unapplied'=>1,'allocations'=>[$sale->id=>0]])->assertSessionHasNoErrors();$this->assertDatabaseHas('customer_receipts',['amount'=>60,'allocated_amount'=>0,'unapplied_amount'=>60]);$this->assertEquals(100,(float)$sale->fresh()->balance_amount);
+    }
     public function test_receipt_rejects_allocation_above_invoice_balance():void
     {
         $sale=$this->creditSale();$this->from(route('receivables.create',['customer_id'=>$this->customerId]))->post(route('receivables.store'),['customer_id'=>$this->customerId,'receipt_date'=>now()->toDateString(),'payment_method'=>'cash','amount'=>110,'allocations'=>[$sale->id=>110]])->assertSessionHasErrors('allocations');$this->assertDatabaseCount('customer_receipts',0);$this->assertEquals(100,$sale->fresh()->balance_amount);
