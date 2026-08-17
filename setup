@@ -1,0 +1,292 @@
+Yes. For a shop PC, install it as a local XAMPP application and open it through Apache—do not depend on `php artisan serve`.
+
+Important: the current project uses PHP 8.0/Laravel 9, which are outdated. It can be installed for local testing, but upgrade them before storing real production accounts and financial data.
+
+## 1. Prepare the shop PC
+
+Recommended:
+
+- Windows 10/11 64-bit
+- At least 8 GB RAM
+- SSD with at least 20 GB free
+- A separate USB drive for backups
+- UPS for the PC and router
+
+Set the Windows date, time and timezone correctly.
+
+## 2. Install required software
+
+Install:
+
+1. XAMPP containing Apache, PHP and MariaDB/MySQL.
+2. Composer for Windows.
+3. Node.js LTS, only if frontend assets need rebuilding.
+4. A modern browser such as Chrome or Edge.
+
+Install XAMPP into a simple path such as:
+
+```text
+C:\xampp
+```
+
+## 3. Copy the ERP project
+
+Copy the entire project folder to:
+
+```text
+C:\xampp\htdocs\Supun-ERP
+```
+
+Do not exclude these important files and directories:
+
+```text
+app
+bootstrap
+config
+database
+public
+resources
+routes
+storage
+vendor
+artisan
+composer.json
+composer.lock
+.env.example
+```
+
+Do not copy the development `.env` as the shop’s final configuration.
+
+## 4. Start the database
+
+Open the XAMPP Control Panel and start:
+
+- Apache
+- MySQL
+
+Both should turn green.
+
+If MySQL cannot start, another MySQL service may already be using port `3306`. Stop the other service or configure XAMPP MySQL to use port `3307`.
+
+## 5. Create the database and database user
+
+Open:
+
+```text
+http://localhost/phpmyadmin
+```
+
+Select the SQL tab and execute:
+
+```sql
+CREATE DATABASE supun_erp
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'supun_erp_app'@'localhost'
+IDENTIFIED BY 'Use-A-New-Strong-Database-Password!';
+
+GRANT ALL PRIVILEGES ON supun_erp.*
+TO 'supun_erp_app'@'localhost';
+
+FLUSH PRIVILEGES;
+```
+
+Replace the example password with a strong unique password.
+
+If the user already exists, use:
+
+```sql
+ALTER USER 'supun_erp_app'@'localhost'
+IDENTIFIED BY 'Use-A-New-Strong-Database-Password!';
+
+GRANT ALL PRIVILEGES ON supun_erp.*
+TO 'supun_erp_app'@'localhost';
+
+FLUSH PRIVILEGES;
+```
+
+## 6. Create the environment file
+
+Copy:
+
+```text
+C:\xampp\htdocs\Supun-ERP\.env.example
+```
+
+and rename the copy to:
+
+```text
+.env
+```
+
+Configure it like this:
+
+```dotenv
+APP_NAME="Supun Group ERP"
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_URL=http://localhost/Supun-ERP/public
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=supun_erp
+DB_USERNAME=supun_erp_app
+DB_PASSWORD="Use-A-New-Strong-Database-Password!"
+
+CACHE_DRIVER=file
+SESSION_DRIVER=file
+QUEUE_CONNECTION=sync
+```
+
+If MySQL uses port `3307`, change `DB_PORT` accordingly.
+
+## 7. Install the application
+
+Open PowerShell as Administrator:
+
+```powershell
+Set-Location "C:\xampp\htdocs\Supun-ERP"
+
+& "C:\xampp\php\php.exe" "C:\ProgramData\ComposerSetup\bin\composer.phar" install --no-dev --optimize-autoloader
+```
+
+Generate the Laravel application key:
+
+```powershell
+& "C:\xampp\php\php.exe" artisan key:generate
+```
+
+For a new shop with an empty database:
+
+```powershell
+& "C:\xampp\php\php.exe" artisan migrate --seed --force
+```
+
+Then optimize Laravel:
+
+```powershell
+& "C:\xampp\php\php.exe" artisan config:cache
+& "C:\xampp\php\php.exe" artisan route:cache
+& "C:\xampp\php\php.exe" artisan view:cache
+```
+
+If frontend assets are missing:
+
+```powershell
+npm install
+npm run build
+```
+
+## 8. Open the ERP
+
+Open:
+
+```text
+http://localhost/Supun-ERP/public
+```
+
+The better permanent arrangement is an Apache virtual host such as:
+
+```text
+http://supun-erp.local
+```
+
+with its document root pointing directly to:
+
+```text
+C:\xampp\htdocs\Supun-ERP\public
+```
+
+This prevents `/public` from appearing in the address.
+
+## 9. First login
+
+Initial CFO account:
+
+```text
+Username: cfo@supun-erp.local
+Password: Cfo@Supun2026!
+```
+
+The system should immediately request a new password. Change it before entering shop data.
+
+Other temporary accounts are:
+
+```text
+Accountant:  accountant@supun-erp.local / Accounts@Supun2026!
+Manager:     manager@supun-erp.local    / Manager@Supun2026!
+Cashier:     cashier@supun-erp.local    / Cashier@Supun2026!
+Storekeeper: storekeeper@supun-erp.local / Stores@Supun2026!
+```
+
+Each employee must change their temporary password. Do not share the CFO password.
+
+## 10. Configure the shop
+
+Log in as CFO and verify:
+
+1. Company name, address, telephone and invoice information.
+2. Financial year and accounting periods.
+3. Chart of Accounts.
+4. Stock locations.
+5. Staff users and permissions.
+6. Categories, brands and units.
+7. Suppliers and registered customers.
+8. Products, prices and opening stock.
+9. Invoice print layout on A4.
+10. Cash sale, credit sale, purchase, GRN and payment workflows.
+
+Use test transactions first. Do not enter live opening balances until the tests reconcile.
+
+## 11. Transfer existing data, if required
+
+If this should contain the current computer’s data, do not run a fresh seed and start entering transactions.
+
+Instead:
+
+1. Create a verified backup on the current PC.
+2. Copy the `.sql` backup to the shop PC.
+3. Import it into the new `supun_erp` database.
+4. Run only pending migrations:
+
+```powershell
+& "C:\xampp\php\php.exe" artisan migrate --force
+```
+
+5. Compare products, stock, receivables, payables and trial balance on both PCs.
+
+Never import both a fresh seeded database and the old operational database without checking for duplicates.
+
+## 12. Daily operation
+
+Each morning:
+
+1. Start XAMPP.
+2. Start Apache and MySQL.
+3. Open the ERP bookmark.
+
+At closing:
+
+1. Complete cashier closing.
+2. Confirm sales and payment totals.
+3. Create an ERP backup.
+4. Copy the backup to the USB drive.
+5. Shut down Windows normally.
+
+Backups are stored under:
+
+```text
+C:\xampp\htdocs\Supun-ERP\storage\app\backups
+```
+
+Keep at least:
+
+- Seven daily backups
+- Four weekly backups
+- Twelve monthly backups
+- One copy outside the shop PC
+
+The installation is only accepted after restoring one backup into a separate test database and confirming that it opens correctly.
