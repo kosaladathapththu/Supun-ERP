@@ -16,9 +16,9 @@
 
 <h2 class="h5 mt-4">Customer account summary</h2>
 <table class="table report-money">
-<thead><tr><th>Code</th><th>Customer</th><th class="text-end">Total invoiced</th><th class="text-end">Paid amount</th><th class="text-end">Invoice outstanding</th><th class="text-end">Paid - not allocated</th><th class="text-end">Current receivable</th></tr></thead>
-<tbody>@forelse($report['customers'] as $customer)<tr><td>{{ $customer->code }}</td><td>{{ $customer->name }}</td><td class="text-end">{{ number_format((float)$customer->total_invoiced,2) }}</td><td class="text-end">{{ number_format((float)$customer->total_received,2) }}</td><td class="text-end">{{ number_format((float)$customer->outstanding_balance,2) }}</td><td class="text-end">{{ number_format((float)$customer->available_advance,2) }}</td><td class="text-end fw-semibold">{{ number_format((float)$customer->current_receivable,2) }}</td></tr>@empty<tr><td colspan="7" class="text-center text-muted">No customer balances available.</td></tr>@endforelse</tbody>
-<tfoot><tr><th colspan="2">Total</th><th class="text-end">{{ number_format($report['totals']['invoiced'],2) }}</th><th class="text-end">{{ number_format($report['totals']['received'],2) }}</th><th class="text-end">{{ number_format($report['totals']['outstanding'],2) }}</th><th class="text-end">{{ number_format($report['totals']['advances'],2) }}</th><th class="text-end">{{ number_format($report['totals']['current_receivable'],2) }}</th></tr></tfoot>
+<thead><tr><th>Code</th><th>Customer</th><th class="text-end">Total invoiced</th><th class="text-end">Paid amount</th><th class="text-end">Current receivable</th></tr></thead>
+<tbody>@forelse($report['customers'] as $customer)<tr><td>{{ $customer->code }}</td><td>{{ $customer->name }}</td><td class="text-end">{{ number_format((float)$customer->total_invoiced,2) }}</td><td class="text-end">{{ number_format((float)$customer->total_received,2) }}</td><td class="text-end fw-semibold">{{ number_format((float)$customer->current_receivable,2) }}</td></tr>@empty<tr><td colspan="5" class="text-center text-muted">No customer balances available.</td></tr>@endforelse</tbody>
+<tfoot><tr><th colspan="2">Total</th><th class="text-end">{{ number_format($report['totals']['invoiced'],2) }}</th><th class="text-end">{{ number_format($report['totals']['received'],2) }}</th><th class="text-end">{{ number_format($report['totals']['current_receivable'],2) }}</th></tr></tfoot>
 </table>
 
 <h2 class="h5 mt-4">Posted receipt history</h2>
