@@ -75,7 +75,9 @@ Route::middleware('auth')->group(function () {
         Route::get('receivables/export/excel',[ReceivableController::class,'exportExcel'])->name('receivables.export.excel');
         Route::get('receivables/export/pdf',[ReceivableController::class,'exportPdf'])->name('receivables.export.pdf');
         Route::get('receivables/customers/{customer}/ledger',[ReceivableController::class,'ledger'])->name('receivables.ledger');
-        Route::resource('receivables',ReceivableController::class)->only(['index','create','store','show']);
+        Route::resource('receivables',ReceivableController::class)
+            ->parameters(['receivables'=>'receipt'])
+            ->only(['index','create','store','show']);
     });
     Route::middleware('permission:accounting.view')->prefix('accounting')->name('accounting.')->group(function(){Route::get('journals',[AccountingController::class,'journals'])->name('journals');Route::get('journals/{journal}',[AccountingController::class,'show'])->name('show');Route::get('trial-balance',[AccountingController::class,'trialBalance'])->name('trial-balance');Route::get('ledger/{account}',[AccountingController::class,'ledger'])->name('ledger');});
     Route::middleware('permission:accounting.view')->prefix('statements')->name('statements.')->group(function(){Route::get('/',[StatementController::class,'index'])->name('index');Route::get('profit-loss',[StatementController::class,'profitLoss'])->name('profit-loss');Route::get('balance-sheet',[StatementController::class,'balanceSheet'])->name('balance-sheet');Route::get('cash-flow',[StatementController::class,'cashFlow'])->name('cash-flow');Route::get('reconciliation',[StatementController::class,'reconciliation'])->name('reconciliation');});

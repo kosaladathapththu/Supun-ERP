@@ -20,6 +20,11 @@ class PhaseFiveReceivablesTest extends TestCase
     public function test_receipt_allocates_to_invoice_and_updates_balance():void
     {
         $sale=$this->creditSale();$this->post(route('receivables.store'),['customer_id'=>$this->customerId,'receipt_date'=>now()->toDateString(),'payment_method'=>'cash','amount'=>75,'allocations'=>[$sale->id=>75]])->assertSessionHasNoErrors();$this->assertDatabaseHas('sales',['id'=>$sale->id,'paid_amount'=>75,'balance_amount'=>25,'payment_status'=>'partially_paid']);$this->assertDatabaseHas('customer_receipts',['allocated_amount'=>75,'unapplied_amount'=>0]);$this->assertDatabaseHas('customer_receipt_allocations',['sale_id'=>$sale->id,'amount'=>75]);
+
+        $receipt=CustomerReceipt::latest('id')->firstOrFail();
+        $this->get(route('receivables.show',$receipt))
+            ->assertOk()
+            ->assertSee($receipt->receipt_number);
     }
     public function test_unallocated_amount_is_kept_as_customer_advance():void
     {
