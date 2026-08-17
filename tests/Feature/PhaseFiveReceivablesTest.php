@@ -1,6 +1,6 @@
 <?php
 namespace Tests\Feature;
-use App\Models\{CustomerReceipt,Product,Sale,User};
+use App\Models\{Customer,CustomerReceipt,Product,Sale,User};
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +11,7 @@ class PhaseFiveReceivablesTest extends TestCase
     protected User $admin; protected int $customerId; protected Product $product;
     protected function setUp():void
     {
-        parent::setUp();$this->seed(DatabaseSeeder::class);$this->admin=User::where('email','admin@supun-erp.local')->firstOrFail();$this->actingAs($this->admin);$company=DB::table('companies')->value('id');$this->customerId=DB::table('customers')->where('code','WALK-IN')->value('id');$category=DB::table('product_categories')->insertGetId(['company_id'=>$company,'code'=>'AR','name'=>'Receivables','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);$this->product=Product::create(['company_id'=>$company,'product_category_id'=>$category,'unit_id'=>DB::table('units')->where('code','PCS')->value('id'),'item_code'=>'AR-001','name'=>'AR Test','average_cost'=>50,'current_quantity'=>10,'minimum_stock'=>0,'reorder_level'=>0,'warranty_months'=>0,'serial_tracking'=>0,'is_active'=>1]);
+        parent::setUp();$this->seed(DatabaseSeeder::class);$this->admin=User::where('email','cfo@supun-erp.local')->firstOrFail();$this->actingAs($this->admin);$company=DB::table('companies')->value('id');$customerTypeId=DB::table('customer_types')->value('id');$this->customerId=Customer::create(['company_id'=>$company,'customer_type_id'=>$customerTypeId,'code'=>'AR-CUSTOMER','name'=>'Receivables Customer','credit_enabled'=>1,'is_walk_in'=>0,'is_active'=>1])->id;$category=DB::table('product_categories')->insertGetId(['company_id'=>$company,'code'=>'AR','name'=>'Receivables','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);$this->product=Product::create(['company_id'=>$company,'product_category_id'=>$category,'unit_id'=>DB::table('units')->where('code','PCS')->value('id'),'item_code'=>'AR-001','name'=>'AR Test','average_cost'=>50,'current_quantity'=>10,'minimum_stock'=>0,'reorder_level'=>0,'warranty_months'=>0,'serial_tracking'=>0,'is_active'=>1]);
     }
     private function creditSale():Sale
     {
