@@ -11,7 +11,23 @@
         :root{--navy:#0f1f38;--navy2:#162b4b;--blue:#2563eb;--bg:#f4f7fb;--muted:#6b7280}
         body{background:var(--bg);font-family:Inter,Segoe UI,sans-serif;color:#172033}.sidebar{width:270px;background:var(--navy);height:100vh;position:fixed;inset:0 auto 0 0;color:#fff;overflow-y:scroll;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#405675 var(--navy)}.sidebar::-webkit-scrollbar{width:7px}.sidebar::-webkit-scrollbar-track{background:var(--navy)}.sidebar::-webkit-scrollbar-thumb{background:#405675;border-radius:8px}.sidebar::-webkit-scrollbar-thumb:hover{background:#587194}.brand{padding:24px;border-bottom:1px solid rgba(255,255,255,.1);position:sticky;top:0;background:var(--navy);z-index:2}.brand-mark{width:42px;height:42px;border-radius:12px;background:#2563eb;display:grid;place-items:center;font-size:21px}.nav-section{font-size:.69rem;letter-spacing:.12em;color:#8291a9;padding:20px 22px 7px}.sidebar .nav-link{color:#c8d2e1;border-radius:9px;margin:2px 12px;padding:10px 12px}.sidebar .nav-link:hover,.sidebar .nav-link.active{color:white;background:var(--navy2)}.sidebar .nav-link i{width:25px}.sidebar .pos-nav{margin:10px 12px 12px;padding:12px;background:#2563eb;color:#fff;font-weight:700;box-shadow:0 7px 18px rgba(37,99,235,.28)}.sidebar .pos-nav:hover,.sidebar .pos-nav.active{background:#1d4ed8;color:#fff}.nav-group-toggle{width:calc(100% - 24px);border:0;text-align:left;display:flex;align-items:center}.nav-group-toggle .chevron{margin-left:auto;width:auto!important;transition:transform .2s}.nav-group-toggle:not(.collapsed) .chevron{transform:rotate(180deg)}.nav-submenu{padding:2px 0 7px}.nav-submenu .nav-link{font-size:.91rem;padding:8px 12px 8px 39px;margin-top:0;margin-bottom:0}.nav-submenu .nav-link i{margin-left:-25px}.main{margin-left:270px;min-height:100vh}.topbar{height:72px;background:#fff;border-bottom:1px solid #e7ebf1;display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10}.content{padding:28px}.card{border:0;box-shadow:0 4px 18px rgba(15,31,56,.06);border-radius:14px}.page-title{font-weight:700}.metric-icon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:#eaf1ff;color:#2563eb;font-size:21px}.badge-soft{background:#edf7f1;color:#198754}.table thead th{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;background:#f8fafc;border-bottom:1px solid #e8edf3}.btn-primary{background:#2563eb;border-color:#2563eb}.coming{opacity:.45;pointer-events:none}.alert{border:0;border-radius:12px}@media(max-width:991px){.sidebar{position:relative;width:100%;height:auto;max-height:none;overflow:visible}.main{margin-left:0}.topbar{position:relative}}
     </style>
-    <style>.topbar-back{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}.sidebar .nav-link.active{box-shadow:inset 3px 0 #60a5fa}.sidebar .pos-nav{background:#059669!important;box-shadow:0 7px 18px rgba(5,150,105,.3)!important}.sidebar .pos-nav:hover,.sidebar .pos-nav.active{background:#047857!important;box-shadow:inset 3px 0 #a7f3d0,0 7px 18px rgba(5,150,105,.3)!important}</style>
+    <style>
+        .topbar-back{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+        .sidebar .nav-link{margin-top:3px;margin-bottom:3px;transition:background-color .16s,color .16s,transform .16s}
+        .sidebar .nav-link:hover{color:#fff;background:#1b3458;transform:translateX(2px)}
+        .sidebar .nav-group-toggle{border:1px solid transparent;font-weight:600}
+        .sidebar .nav-group-toggle:hover{background:#1b3458;border-color:#29486f;transform:none}
+        .sidebar .nav-group-toggle.active{color:#dbeafe;background:#24436f;border-color:#3b6598;box-shadow:inset 4px 0 #60a5fa}
+        .sidebar .nav-submenu{position:relative;padding-top:3px;padding-bottom:9px}
+        .sidebar .nav-submenu:before{content:"";position:absolute;left:28px;top:4px;bottom:12px;width:1px;background:#29415f}
+        .sidebar .nav-submenu .nav-link{position:relative;line-height:1.25;white-space:normal}
+        .sidebar .nav-submenu .nav-link:hover{color:#bae6fd;background:#193354}
+        .sidebar .nav-submenu .nav-link.active{color:#fff;background:#2563eb;box-shadow:inset 4px 0 #93c5fd,0 4px 12px rgba(37,99,235,.22);font-weight:650;transform:none}
+        .sidebar nav>.nav-link.active:not(.pos-nav){color:#fff;background:#2563eb;box-shadow:inset 4px 0 #93c5fd}
+        .sidebar .pos-nav{margin:10px 12px 14px;padding:12px;color:#6ee7b7!important;background:rgba(5,150,105,.12)!important;border:1px solid rgba(52,211,153,.35);font-weight:750;box-shadow:none!important}
+        .sidebar .pos-nav:hover{color:#fff!important;background:#047857!important;transform:translateY(-1px)}
+        .sidebar .pos-nav.active{color:#fff!important;background:#059669!important;box-shadow:inset 4px 0 #a7f3d0,0 7px 18px rgba(5,150,105,.28)!important;transform:none}
+    </style>
     @stack('styles')
 </head>
 <body>
@@ -130,7 +146,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar=document.querySelector('.sidebar');
-    if(sidebar){const saved=Number(sessionStorage.getItem('erp-sidebar-scroll')||0);sidebar.scrollTop=saved;sidebar.addEventListener('scroll',()=>sessionStorage.setItem('erp-sidebar-scroll',String(sidebar.scrollTop)),{passive:true});const active=sidebar.querySelector('.nav-submenu .nav-link.active');if(active&&!saved)active.scrollIntoView({block:'center'});}
+    if(sidebar){const saved=Number(sessionStorage.getItem('erp-sidebar-scroll')||0);sidebar.scrollTop=saved;sidebar.addEventListener('scroll',()=>sessionStorage.setItem('erp-sidebar-scroll',String(sidebar.scrollTop)),{passive:true});const active=sidebar.querySelector('.nav-submenu .nav-link.active, nav > .nav-link.active');if(active){requestAnimationFrame(()=>{const sidebarBox=sidebar.getBoundingClientRect(),activeBox=active.getBoundingClientRect(),safeTop=sidebarBox.top+100,safeBottom=sidebarBox.bottom-50;if(activeBox.top<safeTop||activeBox.bottom>safeBottom)active.scrollIntoView({block:'center'});});}}
     const normalizeQuantityInputs = root => root.querySelectorAll?.('input[type="number"]').forEach(input => {
         if (input.classList.contains('qty') || /(^|\[)(quantity|counted_quantity)(\]|$)/.test(input.name || '')) {
             input.step = 'any';
