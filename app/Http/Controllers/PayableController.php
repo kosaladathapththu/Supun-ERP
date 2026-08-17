@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\{DebitNote, Supplier, SupplierInvoice, SupplierPayment};
 use App\Services\SupplierPaymentService;
+use App\Services\PayableXlsxExportService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -58,6 +59,18 @@ class PayableController extends Controller
         ];
 
         return view('payables.report', compact('invoices', 'totals'));
+    }
+
+    public function history(Request $request)
+    {
+        $invoices = SupplierInvoice::with(['supplier', 'grn'])->where('company_id', $request->user()->company_id)->latest('invoice_date')->paginate(20);
+        return view('payables.history', compact('invoices'));
+    }
+
+    public function exportExcel(Request $request, PayableXlsxExportService $exporter)
+    {
+        $path = $exporter->create($request->user()->company_id, $request->user()->name);
+        return response()->download($path, 'supplier-payables-'.now()->format('Ymd-His').'.xlsx', ['Content-Type'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
     }
 
     public function create(Request $request)
