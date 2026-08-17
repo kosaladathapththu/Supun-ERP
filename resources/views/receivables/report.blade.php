@@ -23,9 +23,9 @@
 
 <h2 class="h5 mt-4">Posted receipt history</h2>
 <table class="table report-money">
-<thead><tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Method</th><th>Reference</th><th class="text-end">Paid amount</th><th class="text-end">Paid - not allocated</th></tr></thead>
-<tbody>@forelse($report['receipts'] as $receipt)<tr><td>{{ $receipt->receipt_number }}</td><td>{{ $receipt->receipt_date->format('d M Y') }}</td><td>{{ $receipt->customer->name }}</td><td>{{ str($receipt->payment_method)->headline() }}</td><td>{{ $receipt->reference ?: '-' }}</td><td class="text-end">{{ number_format((float)$receipt->amount,2) }}</td><td class="text-end">{{ number_format((float)$receipt->unapplied_amount,2) }}</td></tr>@empty<tr><td colspan="7" class="text-center text-muted">No posted receipts for this report scope.</td></tr>@endforelse</tbody>
-@if($report['receipts']->isNotEmpty())<tfoot><tr><th colspan="5">Receipt totals</th><th class="text-end">{{ number_format((float)$report['receipts']->sum('amount'),2) }}</th><th class="text-end">{{ number_format((float)$report['receipts']->sum('unapplied_amount'),2) }}</th></tr></tfoot>@endif
+<thead><tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Method</th><th>Reference</th><th class="text-end">Payment received</th><th class="text-end">Applied to invoices</th></tr></thead>
+<tbody>@forelse($report['receipts'] as $receipt)<tr><td>{{ $receipt->receipt_number }}</td><td>{{ $receipt->receipt_date->format('d M Y') }}</td><td>{{ $receipt->customer->name }}</td><td>{{ str($receipt->payment_method)->headline() }}</td><td>{{ $receipt->reference ?: '-' }}</td><td class="text-end">{{ number_format((float)$receipt->amount,2) }}</td><td class="text-end">{{ number_format((float)$receipt->allocated_amount,2) }}</td></tr>@empty<tr><td colspan="7" class="text-center text-muted">No posted receipts for this report scope.</td></tr>@endforelse</tbody>
+@if($report['receipts']->isNotEmpty())<tfoot><tr><th colspan="5">Receipt totals</th><th class="text-end">{{ number_format((float)$report['receipts']->sum('amount'),2) }}</th><th class="text-end">{{ number_format((float)$report['receipts']->sum('allocated_amount'),2) }}</th></tr></tfoot>@endif
 </table>
 
 @include('reports.partials.professional-footer')
