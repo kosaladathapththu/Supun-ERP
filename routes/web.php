@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('units', UnitController::class)->parameters(['units' => 'record'])->except(['show', 'destroy']);
         Route::resource('products', ProductController::class)->except(['show', 'destroy']);
     });
+    Route::get('customers/{record}/print',[CustomerController::class,'print'])->middleware('permission:customers.view')->name('customers.print');
     Route::resource('customers', CustomerController::class)->parameters(['customers' => 'record'])->except(['destroy'])->middleware('permission:customers.view');
     Route::resource('suppliers', SupplierController::class)->parameters(['suppliers' => 'record'])->except(['show', 'destroy'])->middleware('permission:suppliers.view');
     Route::middleware('permission:purchases.view')->group(function () {
