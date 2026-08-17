@@ -1,9 +1,62 @@
 <?php
+
 namespace Tests\Feature;
-use App\Models\{GoodsReceivedNote,Product,SupplierInvoice,User};use App\Services\{PurchaseReturnService,SalePostingService,SaleReturnService};use Database\Seeders\DatabaseSeeder;use Illuminate\Foundation\Testing\RefreshDatabase;use Illuminate\Support\Facades\DB;use Tests\TestCase;
+
+use App\Models\GoodsReceivedNote;
+use App\Models\Product;
+use App\Models\SupplierInvoice;
+use App\Models\User;
+use App\Services\PurchaseReturnService;
+use App\Services\SalePostingService;
+use App\Services\SaleReturnService;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
 class PhaseEightReturnsTest extends TestCase
 {
- use RefreshDatabase;
- public function test_partial_sales_return_restores_stock_creates_credit_note_and_balanced_journal():void{$this->seed(DatabaseSeeder::class);$u=User::where('email','admin@supun-erp.local')->first();$c=$u->company_id;$cat=DB::table('product_categories')->insertGetId(['company_id'=>$c,'code'=>'RET','name'=>'Returns','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);$p=Product::create(['company_id'=>$c,'product_category_id'=>$cat,'unit_id'=>DB::table('units')->where('code','PCS')->value('id'),'item_code'=>'RET-1','name'=>'Return Item','average_cost'=>50,'current_quantity'=>10,'minimum_stock'=>0,'reorder_level'=>0,'warranty_months'=>0,'serial_tracking'=>0,'is_active'=>1]);$customer=DB::table('customers')->where('code','WALK-IN')->value('id');$sale=app(SalePostingService::class)->post(['customer_id'=>$customer,'channel'=>'retail','payment_type'=>'credit','due_date'=>'2026-09-01','paid_amount'=>0,'payment_method'=>'cash','discount_amount'=>0,'items'=>[['product_id'=>$p->id,'quantity'=>2,'unit_price'=>100]]],$u);$return=app(SaleReturnService::class)->post($sale,['settlement_type'=>'credit_note','reason'=>'Customer return','items'=>[$sale->items()->first()->id=>['quantity'=>1,'condition'=>'resalable']]],$u);$this->assertEqualsWithDelta(9,(float)$p->fresh()->current_quantity,.0001);$this->assertDatabaseHas('credit_notes',['sale_return_id'=>$return->id,'amount'=>100]);$this->assertDatabaseHas('sales',['id'=>$sale->id,'balance_amount'=>100]);$entry=DB::table('journal_entries')->where('source_type',get_class($return))->where('source_id',$return->id)->first();$this->assertNotNull($entry);$debit=DB::table('journal_lines')->where('journal_entry_id',$entry->id)->sum('debit');$credit=DB::table('journal_lines')->where('journal_entry_id',$entry->id)->sum('credit');$this->assertEquals($debit,$credit);}
- public function test_purchase_return_reduces_stock_applies_debit_note_and_posts_balanced_journal():void{$this->seed(DatabaseSeeder::class);$u=User::where('email','admin@supun-erp.local')->first();$c=$u->company_id;$cat=DB::table('product_categories')->insertGetId(['company_id'=>$c,'code'=>'PR','name'=>'Purchase Returns','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);$p=Product::create(['company_id'=>$c,'product_category_id'=>$cat,'unit_id'=>DB::table('units')->where('code','PCS')->value('id'),'item_code'=>'PR-1','name'=>'Supplier Return Item','average_cost'=>50,'current_quantity'=>10,'minimum_stock'=>0,'reorder_level'=>0,'warranty_months'=>0,'serial_tracking'=>0,'is_active'=>1]);$supplier=DB::table('suppliers')->insertGetId(['company_id'=>$c,'code'=>'SUP-RET','name'=>'Return Supplier','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);$po=DB::table('purchase_orders')->insertGetId(['company_id'=>$c,'supplier_id'=>$supplier,'created_by'=>$u->id,'document_number'=>'PO-RET','order_date'=>now(),'status'=>'received','subtotal'=>500,'total_amount'=>500,'created_at'=>now(),'updated_at'=>now()]);$poi=DB::table('purchase_order_items')->insertGetId(['purchase_order_id'=>$po,'product_id'=>$p->id,'quantity'=>10,'received_quantity'=>10,'unit_cost'=>50,'line_total'=>500,'created_at'=>now(),'updated_at'=>now()]);$grn=GoodsReceivedNote::create(['company_id'=>$c,'purchase_order_id'=>$po,'supplier_id'=>$supplier,'stock_location_id'=>DB::table('stock_locations')->where('company_id',$c)->value('id'),'received_by'=>$u->id,'document_number'=>'GRN-RET','received_date'=>now(),'status'=>'posted','total_cost'=>500,'posted_at'=>now()]);$gi=$grn->items()->create(['purchase_order_item_id'=>$poi,'product_id'=>$p->id,'quantity'=>10,'unit_cost'=>50,'line_total'=>500,'average_cost_after'=>50]);SupplierInvoice::create(['company_id'=>$c,'supplier_id'=>$supplier,'goods_received_note_id'=>$grn->id,'document_number'=>'PI-RET','invoice_date'=>now(),'due_date'=>now()->addMonth(),'total_amount'=>500,'paid_amount'=>0,'balance_amount'=>500,'payment_status'=>'unpaid','status'=>'posted']);$return=app(PurchaseReturnService::class)->post($grn,['reason'=>'Damaged shipment','items'=>[$gi->id=>['quantity'=>2,'reason_code'=>'damaged']]],$u);$this->assertEqualsWithDelta(8,(float)$p->fresh()->current_quantity,.0001);$this->assertDatabaseHas('debit_notes',['purchase_return_id'=>$return->id,'amount'=>100,'applied_amount'=>100]);$this->assertDatabaseHas('supplier_invoices',['goods_received_note_id'=>$grn->id,'balance_amount'=>400]);$entry=DB::table('journal_entries')->where('source_type',get_class($return))->where('source_id',$return->id)->first();$this->assertNotNull($entry);$this->assertEquals(DB::table('journal_lines')->where('journal_entry_id',$entry->id)->sum('debit'),DB::table('journal_lines')->where('journal_entry_id',$entry->id)->sum('credit'));}
+    use RefreshDatabase;
+
+    public function test_partial_sales_return_restores_stock_creates_credit_note_and_balanced_journal(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $u = User::where('email', 'admin@supun-erp.local')->first();
+        $c = $u->company_id;
+        $cat = DB::table('product_categories')->insertGetId(['company_id' => $c, 'code' => 'RET', 'name' => 'Returns', 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $p = Product::create(['company_id' => $c, 'product_category_id' => $cat, 'unit_id' => DB::table('units')->where('code', 'PCS')->value('id'), 'item_code' => 'RET-1', 'name' => 'Return Item', 'average_cost' => 50, 'current_quantity' => 10, 'minimum_stock' => 0, 'reorder_level' => 0, 'warranty_months' => 0, 'serial_tracking' => 0, 'is_active' => 1]);
+        $customer = DB::table('customers')->where('code', 'WALK-IN')->value('id');
+        $sale = app(SalePostingService::class)->post(['customer_id' => $customer, 'channel' => 'retail', 'payment_type' => 'credit', 'due_date' => '2026-09-01', 'paid_amount' => 0, 'payment_method' => 'cash', 'discount_amount' => 0, 'items' => [['product_id' => $p->id, 'quantity' => 2, 'unit_price' => 100]]], $u);
+        $return = app(SaleReturnService::class)->post($sale, ['settlement_type' => 'credit_note', 'reason' => 'Customer return', 'items' => [$sale->items()->first()->id => ['quantity' => 1, 'condition' => 'resalable']]], $u);
+        $this->assertEqualsWithDelta(9, (float) $p->fresh()->current_quantity, .0001);
+        $this->assertDatabaseHas('credit_notes', ['sale_return_id' => $return->id, 'amount' => 100]);
+        $this->assertDatabaseHas('sales', ['id' => $sale->id, 'balance_amount' => 100]);
+        $entry = DB::table('journal_entries')->where('source_type', get_class($return))->where('source_id', $return->id)->first();
+        $this->assertNotNull($entry);
+        $debit = DB::table('journal_lines')->where('journal_entry_id', $entry->id)->sum('debit');
+        $credit = DB::table('journal_lines')->where('journal_entry_id', $entry->id)->sum('credit');
+        $this->assertEquals($debit, $credit);
+    }
+
+    public function test_purchase_return_reduces_stock_applies_debit_note_and_posts_balanced_journal(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $u = User::where('email', 'admin@supun-erp.local')->first();
+        $c = $u->company_id;
+        $cat = DB::table('product_categories')->insertGetId(['company_id' => $c, 'code' => 'PR', 'name' => 'Purchase Returns', 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $p = Product::create(['company_id' => $c, 'product_category_id' => $cat, 'unit_id' => DB::table('units')->where('code', 'PCS')->value('id'), 'item_code' => 'PR-1', 'name' => 'Supplier Return Item', 'average_cost' => 50, 'current_quantity' => 10, 'minimum_stock' => 0, 'reorder_level' => 0, 'warranty_months' => 0, 'serial_tracking' => 0, 'is_active' => 1]);
+        $supplier = DB::table('suppliers')->insertGetId(['company_id' => $c, 'code' => 'SUP-RET', 'name' => 'Return Supplier', 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $po = DB::table('purchase_orders')->insertGetId(['company_id' => $c, 'supplier_id' => $supplier, 'created_by' => $u->id, 'document_number' => 'PO-RET', 'order_date' => now(), 'status' => 'received', 'subtotal' => 500, 'total_amount' => 500, 'created_at' => now(), 'updated_at' => now()]);
+        $poi = DB::table('purchase_order_items')->insertGetId(['purchase_order_id' => $po, 'product_id' => $p->id, 'quantity' => 10, 'received_quantity' => 10, 'unit_cost' => 50, 'line_total' => 500, 'created_at' => now(), 'updated_at' => now()]);
+        $grn = GoodsReceivedNote::create(['company_id' => $c, 'purchase_order_id' => $po, 'supplier_id' => $supplier, 'stock_location_id' => DB::table('stock_locations')->where('company_id', $c)->value('id'), 'received_by' => $u->id, 'document_number' => 'GRN-RET', 'received_date' => now(), 'status' => 'posted', 'total_cost' => 500, 'posted_at' => now()]);
+        $gi = $grn->items()->create(['purchase_order_item_id' => $poi, 'product_id' => $p->id, 'quantity' => 10, 'unit_cost' => 50, 'line_total' => 500, 'average_cost_after' => 50]);
+        SupplierInvoice::create(['company_id' => $c, 'supplier_id' => $supplier, 'goods_received_note_id' => $grn->id, 'document_number' => 'PI-RET', 'invoice_date' => now(), 'due_date' => now()->addMonth(), 'total_amount' => 500, 'paid_amount' => 0, 'balance_amount' => 500, 'payment_status' => 'unpaid', 'status' => 'posted']);
+        $return = app(PurchaseReturnService::class)->post($grn, ['reason' => 'Damaged shipment', 'items' => [$gi->id => ['quantity' => 2, 'reason_code' => 'damaged']]], $u);
+        $this->assertEqualsWithDelta(8, (float) $p->fresh()->current_quantity, .0001);
+        $this->assertDatabaseHas('debit_notes', ['purchase_return_id' => $return->id, 'amount' => 100, 'applied_amount' => 100]);
+        $this->assertDatabaseHas('supplier_invoices', ['goods_received_note_id' => $grn->id, 'balance_amount' => 400]);
+        $entry = DB::table('journal_entries')->where('source_type', get_class($return))->where('source_id', $return->id)->first();
+        $this->assertNotNull($entry);
+        $this->assertEquals(DB::table('journal_lines')->where('journal_entry_id', $entry->id)->sum('debit'), DB::table('journal_lines')->where('journal_entry_id', $entry->id)->sum('credit'));
+    }
 }

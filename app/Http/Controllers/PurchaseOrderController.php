@@ -1,11 +1,55 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Http\Requests\PurchaseOrderRequest;use App\Models\{Product,PurchaseOrder,Supplier};use App\Services\DocumentNumberService;use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;
+
+use App\Http\Requests\PurchaseOrderRequest;
+use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\Supplier;
+use App\Services\DocumentNumberService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 class PurchaseOrderController extends Controller
 {
- public function index(Request $r){return view('purchase-orders.index',['orders'=>PurchaseOrder::with('supplier')->where('company_id',$r->user()->company_id)->latest('order_date')->paginate(15)]);}
- public function create(){return view('purchase-orders.form',['suppliers'=>Supplier::where('company_id',auth()->user()->company_id)->where('is_active',true)->orderBy('name')->get(),'products'=>Product::where('company_id',auth()->user()->company_id)->where('is_active',true)->orderBy('name')->get()]);}
- public function store(PurchaseOrderRequest $r,DocumentNumberService $numbers){$order=DB::transaction(function()use($r,$numbers){$subtotal=collect($r->items)->sum(fn($i)=>round($i['quantity']*$i['unit_cost'],2));$o=PurchaseOrder::create(['company_id'=>$r->user()->company_id,'supplier_id'=>$r->supplier_id,'created_by'=>$r->user()->id,'document_number'=>$numbers->next($r->user()->company_id,'purchase_order','PO',date('Y',strtotime($r->order_date))),'order_date'=>$r->order_date,'expected_date'=>$r->expected_date,'status'=>'draft','subtotal'=>$subtotal,'total_amount'=>$subtotal,'notes'=>$r->notes]);foreach($r->items as $i)$o->items()->create(['product_id'=>$i['product_id'],'quantity'=>$i['quantity'],'unit_cost'=>$i['unit_cost'],'line_total'=>round($i['quantity']*$i['unit_cost'],2)]);return $o;});return redirect()->route('purchase-orders.show',$order)->with('success','Purchase order created as draft.');}
- public function show(Request $r,$purchase_order){$o=PurchaseOrder::with(['supplier','items.product'])->where('company_id',$r->user()->company_id)->findOrFail($purchase_order);return view('purchase-orders.show',['order'=>$o]);}
- public function confirm(Request $r,$purchase_order){$o=PurchaseOrder::where('company_id',$r->user()->company_id)->findOrFail($purchase_order);abort_unless($o->status==='draft',422);$o->update(['status'=>'confirmed']);return back()->with('success','Purchase order confirmed and ready to receive.');}
+    public function index(Request $r)
+    {
+        return view('purchase-orders.index', ['orders' => PurchaseOrder::with('supplier')->where('company_id', $r->user()->company_id)->latest('order_date')->paginate(15)]);
+    }
+
+    public function create()
+    {
+        return view('purchase-orders.form', ['suppliers' => Supplier::where('company_id', auth()->user()->company_id)->where('is_active', true)->orderBy('name')->get(), 'products' => Product::where('company_id', auth()->user()->company_id)->where('is_active', true)->orderBy('name')->get()]);
+    }
+
+    public function store(PurchaseOrderRequest $r, DocumentNumberService $numbers)
+    {
+        $order = DB::transaction(function () use ($r, $numbers) {
+        $subtotal = collect($r->items)->sum(fn ($i) => round($i['quantity'] * $i['unit_cost'], 2));
+        $o = PurchaseOrder::create(['company_id' => $r->user()->company_id, 'supplier_id' => $r->supplier_id, 'created_by' => $r->user()->id, 'document_number' => $numbers->next($r->user()->company_id, 'purchase_order', 'PO', date('Y', strtotime($r->order_date))), 'order_date' => $r->order_date, 'expected_date' => $r->expected_date, 'status' => 'draft', 'subtotal' => $subtotal, 'total_amount' => $subtotal, 'notes' => $r->notes]);
+        foreach ($r->items as $i) {
+        $o->items()->create(['product_id' => $i['product_id'], 'quantity' => $i['quantity'], 'unit_cost' => $i['unit_cost'], 'line_total' => round($i['quantity'] * $i['unit_cost'], 2)]);
+        }
+
+return $o;
+        });
+
+        return redirect()->route('purchase-orders.show', $order)->with('success', 'Purchase order created as draft.');
+    }
+
+    public function show(Request $r, $purchase_order)
+    {
+        $o = PurchaseOrder::with(['supplier', 'items.product'])->where('company_id', $r->user()->company_id)->findOrFail($purchase_order);
+
+        return view('purchase-orders.show', ['order' => $o]);
+    }
+
+    public function confirm(Request $r, $purchase_order)
+    {
+        $o = PurchaseOrder::where('company_id', $r->user()->company_id)->findOrFail($purchase_order);
+        abort_unless($o->status === 'draft', 422);
+        $o->update(['status' => 'confirmed']);
+
+        return back()->with('success', 'Purchase order confirmed and ready to receive.');
+    }
 }

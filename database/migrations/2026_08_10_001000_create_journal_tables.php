@@ -1,3 +1,46 @@
 <?php
-use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
-return new class extends Migration {public function up():void{Schema::create('journal_entries',function(Blueprint $t){$t->id();$t->foreignId('company_id')->constrained()->cascadeOnDelete();$t->foreignId('accounting_period_id')->constrained()->restrictOnDelete();$t->foreignId('created_by')->constrained('users')->restrictOnDelete();$t->string('journal_number',30);$t->date('entry_date')->index();$t->string('source_type');$t->unsignedBigInteger('source_id');$t->string('reference_number',50)->nullable();$t->string('description');$t->string('status',20)->default('posted')->index();$t->timestamps();$t->unique(['company_id','journal_number']);$t->unique(['company_id','source_type','source_id']);});Schema::create('journal_lines',function(Blueprint $t){$t->id();$t->foreignId('journal_entry_id')->constrained()->cascadeOnDelete();$t->foreignId('account_id')->constrained()->restrictOnDelete();$t->foreignId('customer_id')->nullable()->constrained()->restrictOnDelete();$t->foreignId('supplier_id')->nullable()->constrained()->restrictOnDelete();$t->string('description')->nullable();$t->decimal('debit',18,2)->default(0);$t->decimal('credit',18,2)->default(0);$t->timestamps();$t->index(['account_id','journal_entry_id']);});}public function down():void{Schema::dropIfExists('journal_lines');Schema::dropIfExists('journal_entries');}};
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('journal_entries', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('company_id')->constrained()->cascadeOnDelete();
+        $t->foreignId('accounting_period_id')->constrained()->restrictOnDelete();
+        $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
+        $t->string('journal_number', 30);
+        $t->date('entry_date')->index();
+        $t->string('source_type');
+        $t->unsignedBigInteger('source_id');
+        $t->string('reference_number', 50)->nullable();
+        $t->string('description');
+        $t->string('status', 20)->default('posted')->index();
+        $t->timestamps();
+        $t->unique(['company_id', 'journal_number']);
+        $t->unique(['company_id', 'source_type', 'source_id']);
+        });
+        Schema::create('journal_lines', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('journal_entry_id')->constrained()->cascadeOnDelete();
+        $t->foreignId('account_id')->constrained()->restrictOnDelete();
+        $t->foreignId('customer_id')->nullable()->constrained()->restrictOnDelete();
+        $t->foreignId('supplier_id')->nullable()->constrained()->restrictOnDelete();
+        $t->string('description')->nullable();
+        $t->decimal('debit', 18, 2)->default(0);
+        $t->decimal('credit', 18, 2)->default(0);
+        $t->timestamps();
+        $t->index(['account_id', 'journal_entry_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('journal_lines');
+        Schema::dropIfExists('journal_entries');
+    }
+};

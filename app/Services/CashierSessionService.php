@@ -14,7 +14,9 @@ class CashierSessionService
         return DB::transaction(function () use ($user, $data) {
             $exists = CashierSession::where('company_id', $user->company_id)
                 ->where('user_id', $user->id)->where('status', 'open')->lockForUpdate()->exists();
-            if ($exists) throw ValidationException::withMessages(['opening_cash' => 'This cashier already has an open session.']);
+            if ($exists) {
+                throw ValidationException::withMessages(['opening_cash' => 'This cashier already has an open session.']);
+            }
 
             return CashierSession::create([
                 'company_id' => $user->company_id, 'user_id' => $user->id,
@@ -43,7 +45,7 @@ class CashierSessionService
             ->where('status', 'posted')->where('payment_method', 'cash')->whereBetween('created_at', [$from, $to])->sum('amount');
         $refunds = DB::table('sale_returns')->where('company_id', $company)->where('created_by', $user)
             ->where('status', 'posted')->where('settlement_type', 'cash_refund')->whereBetween('return_date', [$from, $to])->sum('total_amount');
-        $expected = (float)$session->opening_cash + (float)$cashSales + (float)$receipts - (float)$expenses - (float)$supplierPayments - (float)$refunds;
+        $expected = (float) $session->opening_cash + (float) $cashSales + (float) $receipts - (float) $expenses - (float) $supplierPayments - (float) $refunds;
 
         return ['cash_sales' => $cashSales, 'customer_receipts' => $receipts, 'cash_expenses' => $expenses,
             'supplier_payments' => $supplierPayments, 'cash_refunds' => $refunds, 'expected_cash' => $expected];
@@ -53,11 +55,14 @@ class CashierSessionService
     {
         return DB::transaction(function () use ($session, $user, $data) {
             $session = CashierSession::where('company_id', $user->company_id)->whereKey($session->id)->lockForUpdate()->firstOrFail();
-            if ($session->status !== 'open') throw ValidationException::withMessages(['actual_cash' => 'This cashier session is already closed.']);
+            if ($session->status !== 'open') {
+                throw ValidationException::withMessages(['actual_cash' => 'This cashier session is already closed.']);
+            }
             $totals = $this->totals($session);
-            $actual = (float)$data['actual_cash'];
-            $session->update($totals + ['actual_cash' => $actual, 'variance' => $actual - (float)$totals['expected_cash'],
+            $actual = (float) $data['actual_cash'];
+            $session->update($totals + ['actual_cash' => $actual, 'variance' => $actual - (float) $totals['expected_cash'],
                 'closed_by' => $user->id, 'closed_at' => now(), 'status' => 'closed', 'closing_notes' => $data['closing_notes'] ?? null]);
+
             return $session->refresh();
         });
     }

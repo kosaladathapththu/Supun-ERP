@@ -1,23 +1,100 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Models\{AccountingPeriod,ApprovalRequest,AuditLog,BackupRun,SystemNotification};use App\Services\{ControlCenterService,DatabaseBackupService};use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;use Illuminate\Validation\ValidationException;
+
+use App\Models\AccountingPeriod;
+use App\Models\ApprovalRequest;
+use App\Models\AuditLog;
+use App\Models\BackupRun;
+use App\Models\SystemNotification;
+use App\Services\ControlCenterService;
+use App\Services\DatabaseBackupService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
 class ControlCenterController extends Controller
 {
- public function index(Request $r,ControlCenterService $s){$c=$r->user()->company_id;$s->syncNotifications($c);$checks=[['Database connection',true,DB::connection()->getDatabaseName()],['Application debug disabled',!config('app.debug'),config('app.debug')?'Disable APP_DEBUG before production':'Safe'],['Environment is production',app()->environment('production'),app()->environment()],['Storage writable',is_writable(storage_path()),storage_path()],['Recent verified backup',BackupRun::where('company_id',$c)->where('status','completed')->where('completed_at','>=',now()->subDay())->exists(),'Required within 24 hours']];return view('controls.index',['checks'=>$checks,'notifications'=>SystemNotification::where('company_id',$c)->latest()->get(),'backup'=>BackupRun::where('company_id',$c)->latest()->first(),'pending'=>ApprovalRequest::where('company_id',$c)->where('status','pending')->count()]);}
- public function periods(Request $r){$periods=AccountingPeriod::with('financialYear')->whereHas('financialYear',fn($q)=>$q->where('company_id',$r->user()->company_id))->orderByDesc('starts_on')->get();return view('controls.periods',compact('periods'));}
- public function requestPeriod(Request $r,$period){$period=AccountingPeriod::whereHas('financialYear',fn($q)=>$q->where('company_id',$r->user()->company_id))->findOrFail($period);$data=$r->validate(['action'=>'required|in:close,reopen','reason'=>'required|string|max:1000']);if($data['action']==='close'&&$period->status!=='open'||$data['action']==='reopen'&&$period->status!=='closed')throw ValidationException::withMessages(['action'=>'The period is already in the requested state.']);ApprovalRequest::create(['company_id'=>$r->user()->company_id,'requested_by'=>$r->user()->id,'approval_type'=>'period_'.$data['action'],'subject_type'=>AccountingPeriod::class,'subject_id'=>$period->id,'status'=>'pending','reason'=>$data['reason']]);return back()->with('success','Period control request submitted for approval.');}
- public function approvals(Request $r){return view('controls.approvals',['requests'=>ApprovalRequest::with(['requester','reviewer'])->where('company_id',$r->user()->company_id)->latest()->paginate(25)]);}
- public function review(Request $r,$approval){abort_unless($r->user()->hasPermission('periods.approve'),403);$approval=ApprovalRequest::where('company_id',$r->user()->company_id)->where('status','pending')->findOrFail($approval);if((int)$approval->requested_by===(int)$r->user()->id)throw ValidationException::withMessages(['approval'=>'The requester cannot review their own control request.']);$data=$r->validate(['decision'=>'required|in:approved,rejected','review_notes'=>'nullable|string|max:1000']);DB::transaction(function()use($approval,$data,$r){if($data['decision']==='approved'&&$approval->subject_type===AccountingPeriod::class){$period=AccountingPeriod::lockForUpdate()->findOrFail($approval->subject_id);if($approval->approval_type==='period_close')$period->update(['status'=>'closed','closed_at'=>now(),'closed_by'=>$r->user()->id]);else $period->update(['status'=>'open','reopened_at'=>now(),'reopened_by'=>$r->user()->id,'reopen_reason'=>$approval->reason]);}$approval->update(['status'=>$data['decision'],'reviewed_by'=>$r->user()->id,'reviewed_at'=>now(),'review_notes'=>$data['review_notes']??null]);});return back()->with('success','Approval decision recorded.');}
- public function audit(Request $r){$logs=AuditLog::with('user')->where('company_id',$r->user()->company_id)->latest('occurred_at')->paginate(30);return view('controls.audit',compact('logs'));}
- public function backup(Request $r,DatabaseBackupService $s){abort_unless($r->user()->hasPermission('backups.create'),403);$run=$s->create($r->user());return back()->with('success',"Verified backup {$run->filename} created.");}
- public function downloadBackup(Request $r,$backup){
-  abort_unless($r->user()->hasPermission('backups.create'),403);
-  $run=BackupRun::where('company_id',$r->user()->company_id)->where('status','completed')->findOrFail($backup);
-  abort_unless($run->filename===basename($run->filename),404);
-  $directory=realpath(storage_path('app/backups'));
-  $path=realpath(storage_path('app/backups/'.$run->filename));
-  abort_unless($directory&&$path&&str_starts_with($path,$directory.DIRECTORY_SEPARATOR)&&is_file($path)&&is_readable($path),404,'The backup file is not available.');
-  if($run->checksum){abort_unless(hash_equals($run->checksum,hash_file('sha256',$path)),409,'The backup integrity check failed. Create a new backup before downloading.');}
-  return response()->download($path,$run->filename,['Content-Type'=>'application/sql','X-Content-Type-Options'=>'nosniff']);
- }
+    public function index(Request $r, ControlCenterService $s)
+    {
+        $c = $r->user()->company_id;
+        $s->syncNotifications($c);
+        $checks = [['Database connection', true, DB::connection()->getDatabaseName()], ['Application debug disabled', ! config('app.debug'), config('app.debug') ? 'Disable APP_DEBUG before production' : 'Safe'], ['Environment is production', app()->environment('production'), app()->environment()], ['Storage writable', is_writable(storage_path()), storage_path()], ['Recent verified backup', BackupRun::where('company_id', $c)->where('status', 'completed')->where('completed_at', '>=', now()->subDay())->exists(), 'Required within 24 hours']];
+
+        return view('controls.index', ['checks' => $checks, 'notifications' => SystemNotification::where('company_id', $c)->latest()->get(), 'backup' => BackupRun::where('company_id', $c)->latest()->first(), 'pending' => ApprovalRequest::where('company_id', $c)->where('status', 'pending')->count()]);
+    }
+
+    public function periods(Request $r)
+    {
+        $periods = AccountingPeriod::with('financialYear')->whereHas('financialYear', fn ($q) => $q->where('company_id', $r->user()->company_id))->orderByDesc('starts_on')->get();
+
+        return view('controls.periods', compact('periods'));
+    }
+
+    public function requestPeriod(Request $r, $period)
+    {
+        $period = AccountingPeriod::whereHas('financialYear', fn ($q) => $q->where('company_id', $r->user()->company_id))->findOrFail($period);
+        $data = $r->validate(['action' => 'required|in:close,reopen', 'reason' => 'required|string|max:1000']);
+        if ($data['action'] === 'close' && $period->status !== 'open' || $data['action'] === 'reopen' && $period->status !== 'closed') {
+            throw ValidationException::withMessages(['action' => 'The period is already in the requested state.']);
+        }ApprovalRequest::create(['company_id' => $r->user()->company_id, 'requested_by' => $r->user()->id, 'approval_type' => 'period_'.$data['action'], 'subject_type' => AccountingPeriod::class, 'subject_id' => $period->id, 'status' => 'pending', 'reason' => $data['reason']]);
+
+        return back()->with('success', 'Period control request submitted for approval.');
+    }
+
+    public function approvals(Request $r)
+    {
+        return view('controls.approvals', ['requests' => ApprovalRequest::with(['requester', 'reviewer'])->where('company_id', $r->user()->company_id)->latest()->paginate(25)]);
+    }
+
+    public function review(Request $r, $approval)
+    {
+        abort_unless($r->user()->hasPermission('periods.approve'), 403);
+        $approval = ApprovalRequest::where('company_id', $r->user()->company_id)->where('status', 'pending')->findOrFail($approval);
+        if ((int) $approval->requested_by === (int) $r->user()->id) {
+            throw ValidationException::withMessages(['approval' => 'The requester cannot review their own control request.']);
+        }$data = $r->validate(['decision' => 'required|in:approved,rejected', 'review_notes' => 'nullable|string|max:1000']);
+        DB::transaction(function () use ($approval, $data, $r) {
+        if ($data['decision'] === 'approved' && $approval->subject_type === AccountingPeriod::class) {
+        $period = AccountingPeriod::lockForUpdate()->findOrFail($approval->subject_id);
+        if ($approval->approval_type === 'period_close') {
+        $period->update(['status' => 'closed', 'closed_at' => now(), 'closed_by' => $r->user()->id]);
+        } else {
+        $period->update(['status' => 'open', 'reopened_at' => now(), 'reopened_by' => $r->user()->id, 'reopen_reason' => $approval->reason]);
+        }
+        }$approval->update(['status' => $data['decision'], 'reviewed_by' => $r->user()->id, 'reviewed_at' => now(), 'review_notes' => $data['review_notes'] ?? null]);
+        });
+
+        return back()->with('success', 'Approval decision recorded.');
+    }
+
+    public function audit(Request $r)
+    {
+        $logs = AuditLog::with('user')->where('company_id', $r->user()->company_id)->latest('occurred_at')->paginate(30);
+
+        return view('controls.audit', compact('logs'));
+    }
+
+    public function backup(Request $r, DatabaseBackupService $s)
+    {
+        abort_unless($r->user()->hasPermission('backups.create'), 403);
+        $run = $s->create($r->user());
+
+        return back()->with('success', "Verified backup {$run->filename} created.");
+    }
+
+    public function downloadBackup(Request $r, $backup)
+    {
+        abort_unless($r->user()->hasPermission('backups.create'), 403);
+        $run = BackupRun::where('company_id', $r->user()->company_id)->where('status', 'completed')->findOrFail($backup);
+        abort_unless($run->filename === basename($run->filename), 404);
+        $directory = realpath(storage_path('app/backups'));
+        $path = realpath(storage_path('app/backups/'.$run->filename));
+        abort_unless($directory && $path && str_starts_with($path, $directory.DIRECTORY_SEPARATOR) && is_file($path) && is_readable($path), 404, 'The backup file is not available.');
+        if ($run->checksum) {
+            abort_unless(hash_equals($run->checksum, hash_file('sha256', $path)), 409, 'The backup integrity check failed. Create a new backup before downloading.');
+        }
+
+        return response()->download($path, $run->filename, ['Content-Type' => 'application/sql', 'X-Content-Type-Options' => 'nosniff']);
+    }
 }

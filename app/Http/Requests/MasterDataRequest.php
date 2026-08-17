@@ -7,7 +7,10 @@ use Illuminate\Validation\Rule;
 
 class MasterDataRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
 
     public function rules(): array
     {
@@ -17,6 +20,7 @@ class MasterDataRequest extends FormRequest
             default => 'units',
         };
         $recordId = is_object($this->route('record')) ? $this->route('record')->id : $this->route('record');
+
         return [
             'code' => ['required', 'string', 'max:50', Rule::unique($table)->where(fn ($q) => $q->where('company_id', $this->user()->company_id))->ignore($recordId)],
             'name' => ['required', 'string', 'max:120'],

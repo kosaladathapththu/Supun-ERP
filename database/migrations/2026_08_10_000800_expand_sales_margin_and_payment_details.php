@@ -1,3 +1,26 @@
 <?php
-use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\DB;use Illuminate\Support\Facades\Schema;
-return new class extends Migration{public function up():void{if(DB::getDriverName()==='mysql')DB::statement('ALTER TABLE sale_items MODIFY margin_percentage DECIMAL(18,4) NOT NULL DEFAULT 0');Schema::table('sale_payments',function(Blueprint $t){$t->json('payment_details')->nullable()->after('reference');});}public function down():void{Schema::table('sale_payments',fn(Blueprint $t)=>$t->dropColumn('payment_details'));if(DB::getDriverName()==='mysql')DB::statement('ALTER TABLE sale_items MODIFY margin_percentage DECIMAL(9,4) NOT NULL DEFAULT 0');}};
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE sale_items MODIFY margin_percentage DECIMAL(18,4) NOT NULL DEFAULT 0');
+        }Schema::table('sale_payments', function (Blueprint $t) {
+        $t->json('payment_details')->nullable()->after('reference');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('sale_payments', fn (Blueprint $t) => $t->dropColumn('payment_details'));
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE sale_items MODIFY margin_percentage DECIMAL(9,4) NOT NULL DEFAULT 0');
+        }
+    }
+};

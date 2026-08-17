@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Product, StockAdjustment, StockCount, StockLocation, StockTransfer};
+use App\Models\Product;
+use App\Models\StockAdjustment;
+use App\Models\StockCount;
+use App\Models\StockLocation;
+use App\Models\StockTransfer;
 use App\Services\AdvancedInventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -31,7 +35,10 @@ class InventoryOperationController extends Controller
         ];
     }
 
-    public function transferForm(Request $request) { return view('inventory-operations.transfer', $this->data($request)); }
+    public function transferForm(Request $request)
+    {
+        return view('inventory-operations.transfer', $this->data($request));
+    }
 
     public function transfer(Request $request, AdvancedInventoryService $service)
     {
@@ -44,10 +51,14 @@ class InventoryOperationController extends Controller
             'items.*.quantity' => 'nullable|numeric|min:0',
         ]);
         $service->transfer($data, $request->user());
+
         return redirect()->route('inventory-operations.index')->with('success', 'Stock transfer posted.');
     }
 
-    public function adjustmentForm(Request $request) { return view('inventory-operations.adjustment', $this->data($request)); }
+    public function adjustmentForm(Request $request)
+    {
+        return view('inventory-operations.adjustment', $this->data($request));
+    }
 
     public function adjustment(Request $request, AdvancedInventoryService $service)
     {
@@ -59,10 +70,14 @@ class InventoryOperationController extends Controller
             'items.*.quantity_change' => 'nullable|numeric',
         ]);
         $service->adjust($data, $request->user());
+
         return redirect()->route('inventory-operations.index')->with('success', 'Stock adjustment and accounting entry posted.');
     }
 
-    public function countForm(Request $request) { return view('inventory-operations.count-start', $this->data($request)); }
+    public function countForm(Request $request)
+    {
+        return view('inventory-operations.count-start', $this->data($request));
+    }
 
     public function startCount(Request $request, AdvancedInventoryService $service)
     {
@@ -72,12 +87,14 @@ class InventoryOperationController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
         $count = $service->startCount($data['stock_location_id'], $data['notes'] ?? null, $request->user());
+
         return redirect()->route('inventory-operations.count.edit', $count);
     }
 
     public function editCount(Request $request, $count)
     {
         $count = StockCount::with(['location', 'items.product'])->where('company_id', $request->user()->company_id)->findOrFail($count);
+
         return view('inventory-operations.count', compact('count'));
     }
 
@@ -86,6 +103,7 @@ class InventoryOperationController extends Controller
         $count = StockCount::where('company_id', $request->user()->company_id)->findOrFail($count);
         $data = $request->validate(['items' => 'required|array', 'items.*' => 'required|numeric|min:0']);
         $service->postCount($count, $data['items'], $request->user());
+
         return redirect()->route('inventory-operations.index')->with('success', 'Stock count posted and variances reconciled.');
     }
 }

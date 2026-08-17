@@ -28,22 +28,22 @@ return new class extends Migration
 
                 $now = now();
                 $invoiceId = DB::table('supplier_invoices')->insertGetId([
-                    'company_id'=>$grn->company_id, 'supplier_id'=>$grn->supplier_id, 'goods_received_note_id'=>$grn->id,
-                    'document_number'=>'PI-LEGACY-GRN-'.$grn->id, 'supplier_invoice_number'=>$grn->supplier_invoice_number,
-                    'invoice_date'=>$invoiceDate, 'due_date'=>date('Y-m-d', strtotime($invoiceDate.' +30 days')),
-                    'total_amount'=>$grn->total_cost, 'paid_amount'=>0, 'balance_amount'=>$grn->total_cost,
-                    'payment_status'=>'unpaid', 'status'=>'posted', 'created_at'=>$now, 'updated_at'=>$now,
+                    'company_id' => $grn->company_id, 'supplier_id' => $grn->supplier_id, 'goods_received_note_id' => $grn->id,
+                    'document_number' => 'PI-LEGACY-GRN-'.$grn->id, 'supplier_invoice_number' => $grn->supplier_invoice_number,
+                    'invoice_date' => $invoiceDate, 'due_date' => date('Y-m-d', strtotime($invoiceDate.' +30 days')),
+                    'total_amount' => $grn->total_cost, 'paid_amount' => 0, 'balance_amount' => $grn->total_cost,
+                    'payment_status' => 'unpaid', 'status' => 'posted', 'created_at' => $now, 'updated_at' => $now,
                 ]);
                 $journalId = DB::table('journal_entries')->insertGetId([
-                    'company_id'=>$grn->company_id, 'accounting_period_id'=>$period->id, 'created_by'=>$grn->received_by,
-                    'journal_number'=>'JV-LEGACY-GRN-'.$grn->id, 'entry_date'=>$invoiceDate,
-                    'source_type'=>App\Models\SupplierInvoice::class, 'source_id'=>$invoiceId,
-                    'reference_number'=>$grn->document_number, 'description'=>'Legacy payable repair for '.$grn->document_number,
-                    'status'=>'posted', 'created_at'=>$now, 'updated_at'=>$now,
+                    'company_id' => $grn->company_id, 'accounting_period_id' => $period->id, 'created_by' => $grn->received_by,
+                    'journal_number' => 'JV-LEGACY-GRN-'.$grn->id, 'entry_date' => $invoiceDate,
+                    'source_type' => App\Models\SupplierInvoice::class, 'source_id' => $invoiceId,
+                    'reference_number' => $grn->document_number, 'description' => 'Legacy payable repair for '.$grn->document_number,
+                    'status' => 'posted', 'created_at' => $now, 'updated_at' => $now,
                 ]);
                 DB::table('journal_lines')->insert([
-                    ['journal_entry_id'=>$journalId,'account_id'=>$inventoryAccount,'customer_id'=>null,'supplier_id'=>null,'description'=>'Inventory received','debit'=>$grn->total_cost,'credit'=>0,'created_at'=>$now,'updated_at'=>$now],
-                    ['journal_entry_id'=>$journalId,'account_id'=>$payableAccount,'customer_id'=>null,'supplier_id'=>$grn->supplier_id,'description'=>'Supplier payable','debit'=>0,'credit'=>$grn->total_cost,'created_at'=>$now,'updated_at'=>$now],
+                    ['journal_entry_id' => $journalId, 'account_id' => $inventoryAccount, 'customer_id' => null, 'supplier_id' => null, 'description' => 'Inventory received', 'debit' => $grn->total_cost, 'credit' => 0, 'created_at' => $now, 'updated_at' => $now],
+                    ['journal_entry_id' => $journalId, 'account_id' => $payableAccount, 'customer_id' => null, 'supplier_id' => $grn->supplier_id, 'description' => 'Supplier payable', 'debit' => 0, 'credit' => $grn->total_cost, 'created_at' => $now, 'updated_at' => $now],
                 ]);
             }
         });

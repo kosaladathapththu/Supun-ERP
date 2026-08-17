@@ -1,9 +1,45 @@
 <?php
+
 namespace Tests\Feature;
-use App\Models\User;use App\Services\{FinancialStatementService,JournalPostingService};use Database\Seeders\DatabaseSeeder;use Illuminate\Foundation\Testing\RefreshDatabase;use Tests\TestCase;
+
+use App\Models\User;
+use App\Services\FinancialStatementService;
+use App\Services\JournalPostingService;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
 class PhaseNineFinancialStatementsTest extends TestCase
 {
- use RefreshDatabase;
- public function test_statements_derive_balanced_results_from_posted_journals():void{$this->seed(DatabaseSeeder::class);$u=User::where('email','admin@supun-erp.local')->first();$journal=app(JournalPostingService::class);$date=now()->toDateString();$journal->post($u->company_id,$date,self::class,1,'CAP-1','Owner capital',[['account_code'=>'1110','debit'=>1000],['account_code'=>'3100','credit'=>1000]],$u->id);$journal->post($u->company_id,$date,self::class,2,'SALE-1','Cash sale',[['account_code'=>'1110','debit'=>100],['account_code'=>'4100','credit'=>100]],$u->id);$journal->post($u->company_id,$date,self::class,3,'EXP-1','Cash expense',[['account_code'=>'6800','debit'=>30],['account_code'=>'1110','credit'=>30]],$u->id);$service=app(FinancialStatementService::class);$pl=$service->profitLoss($u->company_id,$date,$date);$this->assertEquals(70,$pl['net_profit']);$bs=$service->balanceSheet($u->company_id,$date);$this->assertEquals(1070,$bs['assets']);$this->assertEquals(1070,$bs['liabilities_equity']);$this->assertEqualsWithDelta(0,$bs['difference'],.001);$cash=$service->cashFlow($u->company_id,$date,$date);$this->assertEquals(1070,$cash['closingCash']);$this->assertEqualsWithDelta(0,$cash['difference'],.001);}
- public function test_authorized_user_can_open_every_statement():void{$this->seed(DatabaseSeeder::class);$u=User::where('email','admin@supun-erp.local')->first();foreach(['/statements','/statements/profit-loss','/statements/balance-sheet','/statements/cash-flow','/statements/reconciliation'] as $url)$this->actingAs($u)->get($url)->assertOk();}
+    use RefreshDatabase;
+
+    public function test_statements_derive_balanced_results_from_posted_journals(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $u = User::where('email', 'admin@supun-erp.local')->first();
+        $journal = app(JournalPostingService::class);
+        $date = now()->toDateString();
+        $journal->post($u->company_id, $date, self::class, 1, 'CAP-1', 'Owner capital', [['account_code' => '1110', 'debit' => 1000], ['account_code' => '3100', 'credit' => 1000]], $u->id);
+        $journal->post($u->company_id, $date, self::class, 2, 'SALE-1', 'Cash sale', [['account_code' => '1110', 'debit' => 100], ['account_code' => '4100', 'credit' => 100]], $u->id);
+        $journal->post($u->company_id, $date, self::class, 3, 'EXP-1', 'Cash expense', [['account_code' => '6800', 'debit' => 30], ['account_code' => '1110', 'credit' => 30]], $u->id);
+        $service = app(FinancialStatementService::class);
+        $pl = $service->profitLoss($u->company_id, $date, $date);
+        $this->assertEquals(70, $pl['net_profit']);
+        $bs = $service->balanceSheet($u->company_id, $date);
+        $this->assertEquals(1070, $bs['assets']);
+        $this->assertEquals(1070, $bs['liabilities_equity']);
+        $this->assertEqualsWithDelta(0, $bs['difference'], .001);
+        $cash = $service->cashFlow($u->company_id, $date, $date);
+        $this->assertEquals(1070, $cash['closingCash']);
+        $this->assertEqualsWithDelta(0, $cash['difference'], .001);
+    }
+
+    public function test_authorized_user_can_open_every_statement(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $u = User::where('email', 'admin@supun-erp.local')->first();
+        foreach (['/statements', '/statements/profit-loss', '/statements/balance-sheet', '/statements/cash-flow', '/statements/reconciliation'] as $url) {
+            $this->actingAs($u)->get($url)->assertOk();
+        }
+    }
 }

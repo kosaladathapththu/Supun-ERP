@@ -1,3 +1,75 @@
 <?php
-use Illuminate\Database\Migrations\Migration;use Illuminate\Database\Schema\Blueprint;use Illuminate\Support\Facades\Schema;
-return new class extends Migration{public function up():void{Schema::create('audit_logs',function(Blueprint $t){$t->id();$t->foreignId('company_id')->nullable()->constrained()->nullOnDelete();$t->foreignId('user_id')->nullable()->constrained()->nullOnDelete();$t->dateTime('occurred_at')->index();$t->string('event',80)->index();$t->string('route_name')->nullable();$t->string('method',10);$t->string('url',500);$t->string('ip_address',45)->nullable();$t->string('user_agent',500)->nullable();$t->unsignedSmallInteger('response_status')->nullable();$t->json('metadata')->nullable();$t->timestamps();});Schema::create('approval_requests',function(Blueprint $t){$t->id();$t->foreignId('company_id')->constrained()->cascadeOnDelete();$t->foreignId('requested_by')->constrained('users')->restrictOnDelete();$t->foreignId('reviewed_by')->nullable()->constrained('users')->restrictOnDelete();$t->string('approval_type',80)->index();$t->string('subject_type');$t->unsignedBigInteger('subject_id');$t->string('status',20)->default('pending')->index();$t->text('reason');$t->text('review_notes')->nullable();$t->timestamp('reviewed_at')->nullable();$t->timestamps();$t->index(['subject_type','subject_id']);});Schema::create('system_notifications',function(Blueprint $t){$t->id();$t->foreignId('company_id')->constrained()->cascadeOnDelete();$t->string('type',50)->index();$t->string('severity',20)->default('info');$t->string('title');$t->text('message');$t->string('action_url')->nullable();$t->string('fingerprint')->nullable();$t->timestamp('read_at')->nullable();$t->timestamps();$t->unique(['company_id','fingerprint']);});Schema::create('backup_runs',function(Blueprint $t){$t->id();$t->foreignId('company_id')->constrained()->cascadeOnDelete();$t->foreignId('created_by')->constrained('users')->restrictOnDelete();$t->string('filename');$t->string('status',20)->index();$t->unsignedBigInteger('size_bytes')->default(0);$t->string('checksum',64)->nullable();$t->text('error_message')->nullable();$t->timestamp('completed_at')->nullable();$t->timestamps();});}public function down():void{Schema::dropIfExists('backup_runs');Schema::dropIfExists('system_notifications');Schema::dropIfExists('approval_requests');Schema::dropIfExists('audit_logs');}};
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('audit_logs', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+        $t->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+        $t->dateTime('occurred_at')->index();
+        $t->string('event', 80)->index();
+        $t->string('route_name')->nullable();
+        $t->string('method', 10);
+        $t->string('url', 500);
+        $t->string('ip_address', 45)->nullable();
+        $t->string('user_agent', 500)->nullable();
+        $t->unsignedSmallInteger('response_status')->nullable();
+        $t->json('metadata')->nullable();
+        $t->timestamps();
+        });
+        Schema::create('approval_requests', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('company_id')->constrained()->cascadeOnDelete();
+        $t->foreignId('requested_by')->constrained('users')->restrictOnDelete();
+        $t->foreignId('reviewed_by')->nullable()->constrained('users')->restrictOnDelete();
+        $t->string('approval_type', 80)->index();
+        $t->string('subject_type');
+        $t->unsignedBigInteger('subject_id');
+        $t->string('status', 20)->default('pending')->index();
+        $t->text('reason');
+        $t->text('review_notes')->nullable();
+        $t->timestamp('reviewed_at')->nullable();
+        $t->timestamps();
+        $t->index(['subject_type', 'subject_id']);
+        });
+        Schema::create('system_notifications', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('company_id')->constrained()->cascadeOnDelete();
+        $t->string('type', 50)->index();
+        $t->string('severity', 20)->default('info');
+        $t->string('title');
+        $t->text('message');
+        $t->string('action_url')->nullable();
+        $t->string('fingerprint')->nullable();
+        $t->timestamp('read_at')->nullable();
+        $t->timestamps();
+        $t->unique(['company_id', 'fingerprint']);
+        });
+        Schema::create('backup_runs', function (Blueprint $t) {
+        $t->id();
+        $t->foreignId('company_id')->constrained()->cascadeOnDelete();
+        $t->foreignId('created_by')->constrained('users')->restrictOnDelete();
+        $t->string('filename');
+        $t->string('status', 20)->index();
+        $t->unsignedBigInteger('size_bytes')->default(0);
+        $t->string('checksum', 64)->nullable();
+        $t->text('error_message')->nullable();
+        $t->timestamp('completed_at')->nullable();
+        $t->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('backup_runs');
+        Schema::dropIfExists('system_notifications');
+        Schema::dropIfExists('approval_requests');
+        Schema::dropIfExists('audit_logs');
+    }
+};

@@ -2,71 +2,207 @@
 
 namespace App\Services;
 
-use App\Models\{Supplier, SupplierInvoice, SupplierPayment};
+use App\Models\Supplier;
+use App\Models\SupplierInvoice;
+use App\Models\SupplierPayment;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\{Alignment, Border, Fill};
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use RuntimeException;
 
 class PayableXlsxExportService
 {
-    private const NAVY='17396B'; private const PALE='F2F6FB'; private const LIGHT='EAF1FA'; private const BORDER='DDE5EE'; private const RED='D92D3A';
-    private const MONEY='"Rs. "#,##0.00;[Red]-"Rs. "#,##0.00';
+    private const NAVY = '17396B';
 
-    public function create(int $companyId,string $generatedBy):string
+    private const PALE = 'F2F6FB';
+
+    private const LIGHT = 'EAF1FA';
+
+    private const BORDER = 'DDE5EE';
+
+    private const RED = 'D92D3A';
+
+    private const MONEY = '"Rs. "#,##0.00;[Red]-"Rs. "#,##0.00';
+
+    public function create(int $companyId, string $generatedBy): string
     {
-        $company=DB::table('companies')->where('id',$companyId)->first();
-        $suppliers=Supplier::where('company_id',$companyId)->where('is_active',1)->addSelect([
-            'total_invoiced'=>SupplierInvoice::selectRaw('COALESCE(SUM(total_amount),0)')->whereColumn('supplier_id','suppliers.id')->where('company_id',$companyId)->where('status','posted'),
-            'total_paid'=>SupplierPayment::selectRaw('COALESCE(SUM(amount),0)')->whereColumn('supplier_id','suppliers.id')->where('company_id',$companyId)->where('status','posted'),
-            'current_payable'=>SupplierInvoice::selectRaw('COALESCE(SUM(balance_amount),0)')->whereColumn('supplier_id','suppliers.id')->where('company_id',$companyId)->where('status','posted'),
+        $company = DB::table('companies')->where('id', $companyId)->first();
+        $suppliers = Supplier::where('company_id', $companyId)->where('is_active', 1)->addSelect([
+            'total_invoiced' => SupplierInvoice::selectRaw('COALESCE(SUM(total_amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+            'total_paid' => SupplierPayment::selectRaw('COALESCE(SUM(amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+            'current_payable' => SupplierInvoice::selectRaw('COALESCE(SUM(balance_amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
         ])->orderBy('name')->get();
-        $invoices=SupplierInvoice::with('supplier')->where('company_id',$companyId)->where('status','posted')->orderBy('invoice_date')->get();
-        $payments=SupplierPayment::with('supplier')->where('company_id',$companyId)->where('status','posted')->orderBy('payment_date')->get();
-        $totals=['billed'=>(float)$suppliers->sum('total_invoiced'),'paid'=>(float)$suppliers->sum('total_paid'),'payable'=>(float)$suppliers->sum('current_payable')];
+        $invoices = SupplierInvoice::with('supplier')->where('company_id', $companyId)->where('status', 'posted')->orderBy('invoice_date')->get();
+        $payments = SupplierPayment::with('supplier')->where('company_id', $companyId)->where('status', 'posted')->orderBy('payment_date')->get();
+        $totals = ['billed' => (float) $suppliers->sum('total_invoiced'), 'paid' => (float) $suppliers->sum('total_paid'), 'payable' => (float) $suppliers->sum('current_payable')];
 
-        $book=new Spreadsheet();$book->getProperties()->setCreator('Supun Group ERP')->setTitle('Supplier Payables Report');
-        $this->summary($book->getActiveSheet(),$company,$totals,$suppliers,$invoices,$generatedBy);
-        $this->supplierBalances($book->createSheet(),$suppliers,$totals);
-        $this->billHistory($book->createSheet(),$invoices);
-        $this->paymentHistory($book->createSheet(),$payments);
+        $book = new Spreadsheet();
+        $book->getProperties()->setCreator('Supun Group ERP')->setTitle('Supplier Payables Report');
+        $this->summary($book->getActiveSheet(), $company, $totals, $suppliers, $invoices, $generatedBy);
+        $this->supplierBalances($book->createSheet(), $suppliers, $totals);
+        $this->billHistory($book->createSheet(), $invoices);
+        $this->paymentHistory($book->createSheet(), $payments);
         $book->setActiveSheetIndex(0);
-        $base=tempnam(storage_path('app'),'payables-');if($base===false)throw new RuntimeException('Could not create the Excel report file.');$path=$base.'.xlsx';@unlink($base);(new Xlsx($book))->save($path);$book->disconnectWorksheets();return $path;
+        $base = tempnam(storage_path('app'), 'payables-');
+        if ($base === false) {
+            throw new RuntimeException('Could not create the Excel report file.');
+        }$path = $base.'.xlsx';
+        @unlink($base);
+        (new Xlsx($book))->save($path);
+        $book->disconnectWorksheets();
+
+        return $path;
     }
 
-    private function summary($sheet,$company,array $totals,$suppliers,$invoices,string $generatedBy):void
+    private function summary($sheet, $company, array $totals, $suppliers, $invoices, string $generatedBy): void
     {
-        $sheet->setTitle('Summary');$sheet->mergeCells('A1:F1')->setCellValue('A1','SUPUN GROUP ERP');$sheet->mergeCells('A2:F2')->setCellValue('A2',($company->name??'Supun Group').' - Supplier Payables Report');$sheet->mergeCells('A3:F3')->setCellValue('A3','All posted supplier invoices and payments');
-        foreach(['A5:B5'=>'TOTAL SUPPLIER BILLS','C5:D5'=>'TOTAL PAID TO SUPPLIERS','E5:F5'=>'CURRENT PAYABLE'] as $range=>$label){$sheet->mergeCells($range)->setCellValue(explode(':',$range)[0],$label);}foreach(['A6:B6'=>$totals['billed'],'C6:D6'=>$totals['paid'],'E6:F6'=>$totals['payable']] as $range=>$value){$sheet->mergeCells($range)->setCellValue(explode(':',$range)[0],$value);}
-        $sheet->mergeCells('A8:F8')->setCellValue('A8','REPORT INFORMATION');foreach([9=>['Generated at',now()->format('d M Y, H:i')],10=>['Generated by',$generatedBy],11=>['Suppliers',$suppliers->count()],12=>['Posted bills',$invoices->count()]] as $row=>$values){$sheet->setCellValue('A'.$row,$values[0]);$sheet->mergeCells('B'.$row.':F'.$row)->setCellValue('B'.$row,$values[1]);}
-        $sheet->getStyle('A1:F1')->applyFromArray($this->title(20));$sheet->getStyle('A2:F2')->getFont()->setBold(true)->setSize(13)->getColor()->setRGB(self::NAVY);$sheet->getStyle('A5:F5')->applyFromArray($this->card());$sheet->getStyle('A6:F6')->applyFromArray($this->card());$sheet->getStyle('A6:F6')->getFont()->setBold(true)->setSize(15);$sheet->getStyle('E6:F6')->getFont()->getColor()->setRGB(self::RED);$sheet->getStyle('A6:F6')->getNumberFormat()->setFormatCode(self::MONEY);$sheet->getStyle('A8:F8')->applyFromArray($this->header());foreach(range('A','F') as $c)$sheet->getColumnDimension($c)->setWidth(21);$this->page($sheet,'A1:F15');
+        $sheet->setTitle('Summary');
+        $sheet->mergeCells('A1:F1')->setCellValue('A1', 'SUPUN GROUP ERP');
+        $sheet->mergeCells('A2:F2')->setCellValue('A2', ($company->name ?? 'Supun Group').' - Supplier Payables Report');
+        $sheet->mergeCells('A3:F3')->setCellValue('A3', 'All posted supplier invoices and payments');
+        foreach (['A5:B5' => 'TOTAL SUPPLIER BILLS', 'C5:D5' => 'TOTAL PAID TO SUPPLIERS', 'E5:F5' => 'CURRENT PAYABLE'] as $range => $label) {
+            $sheet->mergeCells($range)->setCellValue(explode(':', $range)[0], $label);
+        }foreach (['A6:B6' => $totals['billed'], 'C6:D6' => $totals['paid'], 'E6:F6' => $totals['payable']] as $range => $value) {
+            $sheet->mergeCells($range)->setCellValue(explode(':', $range)[0], $value);
+        }
+        $sheet->mergeCells('A8:F8')->setCellValue('A8', 'REPORT INFORMATION');
+        foreach ([9 => ['Generated at', now()->format('d M Y, H:i')], 10 => ['Generated by', $generatedBy], 11 => ['Suppliers', $suppliers->count()], 12 => ['Posted bills', $invoices->count()]] as $row => $values) {
+            $sheet->setCellValue('A'.$row, $values[0]);
+            $sheet->mergeCells('B'.$row.':F'.$row)->setCellValue('B'.$row, $values[1]);
+        }
+        $sheet->getStyle('A1:F1')->applyFromArray($this->title(20));
+        $sheet->getStyle('A2:F2')->getFont()->setBold(true)->setSize(13)->getColor()->setRGB(self::NAVY);
+        $sheet->getStyle('A5:F5')->applyFromArray($this->card());
+        $sheet->getStyle('A6:F6')->applyFromArray($this->card());
+        $sheet->getStyle('A6:F6')->getFont()->setBold(true)->setSize(15);
+        $sheet->getStyle('E6:F6')->getFont()->getColor()->setRGB(self::RED);
+        $sheet->getStyle('A6:F6')->getNumberFormat()->setFormatCode(self::MONEY);
+        $sheet->getStyle('A8:F8')->applyFromArray($this->header());
+        foreach (range('A', 'F') as $c) {
+            $sheet->getColumnDimension($c)->setWidth(21);
+        }$this->page($sheet, 'A1:F15');
     }
 
-    private function supplierBalances($sheet,$suppliers,array $totals):void
+    private function supplierBalances($sheet, $suppliers, array $totals): void
     {
-        $sheet->setTitle('Supplier Balances');$sheet->mergeCells('A1:E1')->setCellValue('A1','SUPPLIER ACCOUNT SUMMARY');$sheet->mergeCells('A2:E2')->setCellValue('A2','Total billed, paid and currently payable (LKR)');$sheet->fromArray(['Supplier code','Supplier','Total billed','Paid amount','Current payable'],null,'A4');$row=5;
-        foreach($suppliers as $s){$sheet->setCellValueExplicit('A'.$row,(string)$s->code,DataType::TYPE_STRING);$sheet->setCellValue('B'.$row,$s->name);$sheet->setCellValue('C'.$row,(float)$s->total_invoiced);$sheet->setCellValue('D'.$row,(float)$s->total_paid);$sheet->setCellValue('E'.$row,(float)$s->current_payable);$row++;}$last=$row-1;$sheet->setCellValue('A'.$row,'TOTAL')->mergeCells('A'.$row.':B'.$row);$sheet->setCellValue('C'.$row,$totals['billed']);$sheet->setCellValue('D'.$row,$totals['paid']);$sheet->setCellValue('E'.$row,$totals['payable']);$this->tableStyle($sheet,'E',$row,$last);foreach(['A'=>18,'B'=>36,'C'=>20,'D'=>20,'E'=>20] as $c=>$w)$sheet->getColumnDimension($c)->setWidth($w);$this->page($sheet,'A1:E'.$row);
+        $sheet->setTitle('Supplier Balances');
+        $sheet->mergeCells('A1:E1')->setCellValue('A1', 'SUPPLIER ACCOUNT SUMMARY');
+        $sheet->mergeCells('A2:E2')->setCellValue('A2', 'Total billed, paid and currently payable (LKR)');
+        $sheet->fromArray(['Supplier code', 'Supplier', 'Total billed', 'Paid amount', 'Current payable'], null, 'A4');
+        $row = 5;
+        foreach ($suppliers as $s) {
+            $sheet->setCellValueExplicit('A'.$row, (string) $s->code, DataType::TYPE_STRING);
+            $sheet->setCellValue('B'.$row, $s->name);
+            $sheet->setCellValue('C'.$row, (float) $s->total_invoiced);
+            $sheet->setCellValue('D'.$row, (float) $s->total_paid);
+            $sheet->setCellValue('E'.$row, (float) $s->current_payable);
+            $row++;
+        }$last = $row - 1;
+        $sheet->setCellValue('A'.$row, 'TOTAL')->mergeCells('A'.$row.':B'.$row);
+        $sheet->setCellValue('C'.$row, $totals['billed']);
+        $sheet->setCellValue('D'.$row, $totals['paid']);
+        $sheet->setCellValue('E'.$row, $totals['payable']);
+        $this->tableStyle($sheet, 'E', $row, $last);
+        foreach (['A' => 18, 'B' => 36, 'C' => 20, 'D' => 20, 'E' => 20] as $c => $w) {
+            $sheet->getColumnDimension($c)->setWidth($w);
+        }$this->page($sheet, 'A1:E'.$row);
     }
 
-    private function billHistory($sheet,$items):void
+    private function billHistory($sheet, $items): void
     {
-        $sheet->setTitle('Bill History');$sheet->mergeCells('A1:H1')->setCellValue('A1','SUPPLIER BILL HISTORY');$sheet->mergeCells('A2:H2')->setCellValue('A2','All posted supplier invoices');$sheet->fromArray(['Invoice','Supplier reference','Supplier code','Supplier','Invoice date','Due date','Total','Balance'],null,'A4');$row=5;
-        foreach($items as $x){$sheet->setCellValueExplicit('A'.$row,(string)$x->document_number,DataType::TYPE_STRING);$sheet->setCellValueExplicit('B'.$row,(string)($x->supplier_invoice_number??''),DataType::TYPE_STRING);$sheet->setCellValueExplicit('C'.$row,(string)$x->supplier->code,DataType::TYPE_STRING);$sheet->setCellValue('D'.$row,$x->supplier->name);$sheet->setCellValue('E'.$row,Date::PHPToExcel($x->invoice_date));if($x->due_date)$sheet->setCellValue('F'.$row,Date::PHPToExcel($x->due_date));$sheet->setCellValue('G'.$row,(float)$x->total_amount);$sheet->setCellValue('H'.$row,(float)$x->balance_amount);$row++;}$last=$row-1;$sheet->setCellValue('A'.$row,'TOTAL')->mergeCells('A'.$row.':F'.$row);$sheet->setCellValue('G'.$row,(float)$items->sum('total_amount'));$sheet->setCellValue('H'.$row,(float)$items->sum('balance_amount'));$this->tableStyle($sheet,'H',$row,$last);if($last>=5)$sheet->getStyle('E5:F'.$last)->getNumberFormat()->setFormatCode('yyyy-mm-dd');foreach(['A'=>23,'B'=>22,'C'=>17,'D'=>32,'E'=>15,'F'=>15,'G'=>20,'H'=>20] as $c=>$w)$sheet->getColumnDimension($c)->setWidth($w);$this->page($sheet,'A1:H'.$row);
+        $sheet->setTitle('Bill History');
+        $sheet->mergeCells('A1:H1')->setCellValue('A1', 'SUPPLIER BILL HISTORY');
+        $sheet->mergeCells('A2:H2')->setCellValue('A2', 'All posted supplier invoices');
+        $sheet->fromArray(['Invoice', 'Supplier reference', 'Supplier code', 'Supplier', 'Invoice date', 'Due date', 'Total', 'Balance'], null, 'A4');
+        $row = 5;
+        foreach ($items as $x) {
+            $sheet->setCellValueExplicit('A'.$row, (string) $x->document_number, DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B'.$row, (string) ($x->supplier_invoice_number ?? ''), DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('C'.$row, (string) $x->supplier->code, DataType::TYPE_STRING);
+            $sheet->setCellValue('D'.$row, $x->supplier->name);
+            $sheet->setCellValue('E'.$row, Date::PHPToExcel($x->invoice_date));
+            if ($x->due_date) {
+                $sheet->setCellValue('F'.$row, Date::PHPToExcel($x->due_date));
+            }$sheet->setCellValue('G'.$row, (float) $x->total_amount);
+            $sheet->setCellValue('H'.$row, (float) $x->balance_amount);
+            $row++;
+        }$last = $row - 1;
+        $sheet->setCellValue('A'.$row, 'TOTAL')->mergeCells('A'.$row.':F'.$row);
+        $sheet->setCellValue('G'.$row, (float) $items->sum('total_amount'));
+        $sheet->setCellValue('H'.$row, (float) $items->sum('balance_amount'));
+        $this->tableStyle($sheet, 'H', $row, $last);
+        if ($last >= 5) {
+            $sheet->getStyle('E5:F'.$last)->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        }foreach (['A' => 23, 'B' => 22, 'C' => 17, 'D' => 32, 'E' => 15, 'F' => 15, 'G' => 20, 'H' => 20] as $c => $w) {
+            $sheet->getColumnDimension($c)->setWidth($w);
+        }$this->page($sheet, 'A1:H'.$row);
     }
 
-    private function paymentHistory($sheet,$items):void
+    private function paymentHistory($sheet, $items): void
     {
-        $sheet->setTitle('Payment History');$sheet->mergeCells('A1:G1')->setCellValue('A1','SUPPLIER PAYMENT HISTORY');$sheet->mergeCells('A2:G2')->setCellValue('A2','All posted supplier payments');$sheet->fromArray(['Payment','Date','Supplier code','Supplier','Method','Reference','Amount paid'],null,'A4');$row=5;
-        foreach($items as $x){$sheet->setCellValueExplicit('A'.$row,(string)$x->payment_number,DataType::TYPE_STRING);$sheet->setCellValue('B'.$row,Date::PHPToExcel($x->payment_date));$sheet->setCellValueExplicit('C'.$row,(string)$x->supplier->code,DataType::TYPE_STRING);$sheet->setCellValue('D'.$row,$x->supplier->name);$sheet->setCellValue('E'.$row,str($x->payment_method)->headline()->toString());$sheet->setCellValue('F'.$row,$x->reference??'');$sheet->setCellValue('G'.$row,(float)$x->amount);$row++;}$last=$row-1;$sheet->setCellValue('A'.$row,'TOTAL')->mergeCells('A'.$row.':F'.$row);$sheet->setCellValue('G'.$row,(float)$items->sum('amount'));$this->tableStyle($sheet,'G',$row,$last);if($last>=5)$sheet->getStyle('B5:B'.$last)->getNumberFormat()->setFormatCode('yyyy-mm-dd');foreach(['A'=>23,'B'=>15,'C'=>17,'D'=>32,'E'=>20,'F'=>24,'G'=>20] as $c=>$w)$sheet->getColumnDimension($c)->setWidth($w);$this->page($sheet,'A1:G'.$row);
+        $sheet->setTitle('Payment History');
+        $sheet->mergeCells('A1:G1')->setCellValue('A1', 'SUPPLIER PAYMENT HISTORY');
+        $sheet->mergeCells('A2:G2')->setCellValue('A2', 'All posted supplier payments');
+        $sheet->fromArray(['Payment', 'Date', 'Supplier code', 'Supplier', 'Method', 'Reference', 'Amount paid'], null, 'A4');
+        $row = 5;
+        foreach ($items as $x) {
+            $sheet->setCellValueExplicit('A'.$row, (string) $x->payment_number, DataType::TYPE_STRING);
+            $sheet->setCellValue('B'.$row, Date::PHPToExcel($x->payment_date));
+            $sheet->setCellValueExplicit('C'.$row, (string) $x->supplier->code, DataType::TYPE_STRING);
+            $sheet->setCellValue('D'.$row, $x->supplier->name);
+            $sheet->setCellValue('E'.$row, str($x->payment_method)->headline()->toString());
+            $sheet->setCellValue('F'.$row, $x->reference ?? '');
+            $sheet->setCellValue('G'.$row, (float) $x->amount);
+            $row++;
+        }$last = $row - 1;
+        $sheet->setCellValue('A'.$row, 'TOTAL')->mergeCells('A'.$row.':F'.$row);
+        $sheet->setCellValue('G'.$row, (float) $items->sum('amount'));
+        $this->tableStyle($sheet, 'G', $row, $last);
+        if ($last >= 5) {
+            $sheet->getStyle('B5:B'.$last)->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        }foreach (['A' => 23, 'B' => 15, 'C' => 17, 'D' => 32, 'E' => 20, 'F' => 24, 'G' => 20] as $c => $w) {
+            $sheet->getColumnDimension($c)->setWidth($w);
+        }$this->page($sheet, 'A1:G'.$row);
     }
 
-    private function tableStyle($sheet,string $lastColumn,int $totalRow,int $lastData):void{$sheet->getStyle('A1:'.$lastColumn.'1')->applyFromArray($this->title(19));$sheet->getStyle('A4:'.$lastColumn.'4')->applyFromArray($this->header());$sheet->getStyle('A'.$totalRow.':'.$lastColumn.$totalRow)->applyFromArray(['font'=>['bold'=>true],'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>self::LIGHT]],'borders'=>['top'=>['borderStyle'=>Border::BORDER_MEDIUM,'color'=>['rgb'=>self::NAVY]]]]);if($lastData>=5){$sheet->setAutoFilter('A4:'.$lastColumn.$lastData);$sheet->getStyle('A5:'.$lastColumn.$lastData)->getBorders()->getBottom()->setBorderStyle(Border::BORDER_HAIR)->getColor()->setRGB(self::BORDER);}$sheet->getStyle('C5:'.$lastColumn.$totalRow)->getNumberFormat()->setFormatCode(self::MONEY);$sheet->freezePane('A5');}
-    private function title(int $size):array{return ['font'=>['bold'=>true,'size'=>$size,'color'=>['rgb'=>'FFFFFF']],'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>self::NAVY]],'alignment'=>['vertical'=>Alignment::VERTICAL_CENTER]];}
-    private function header():array{return ['font'=>['bold'=>true,'color'=>['rgb'=>'FFFFFF']],'fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>self::NAVY]]];}
-    private function card():array{return ['fill'=>['fillType'=>Fill::FILL_SOLID,'startColor'=>['rgb'=>self::PALE]],'alignment'=>['horizontal'=>Alignment::HORIZONTAL_CENTER],'borders'=>['outline'=>['borderStyle'=>Border::BORDER_THIN,'color'=>['rgb'=>self::BORDER]]]];}
-    private function page($sheet,string $area):void{$sheet->setShowGridlines(false);$sheet->getSheetView()->setZoomScale(90);$sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4)->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setFitToWidth(1)->setFitToHeight(0)->setPrintArea($area);$sheet->getHeaderFooter()->setOddFooter('&LSupun Group ERP&CConfidential business report&RPage &P of &N');}
+    private function tableStyle($sheet, string $lastColumn, int $totalRow, int $lastData): void
+    {
+        $sheet->getStyle('A1:'.$lastColumn.'1')->applyFromArray($this->title(19));
+        $sheet->getStyle('A4:'.$lastColumn.'4')->applyFromArray($this->header());
+        $sheet->getStyle('A'.$totalRow.':'.$lastColumn.$totalRow)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::LIGHT]], 'borders' => ['top' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => self::NAVY]]]]);
+        if ($lastData >= 5) {
+            $sheet->setAutoFilter('A4:'.$lastColumn.$lastData);
+            $sheet->getStyle('A5:'.$lastColumn.$lastData)->getBorders()->getBottom()->setBorderStyle(Border::BORDER_HAIR)->getColor()->setRGB(self::BORDER);
+        }$sheet->getStyle('C5:'.$lastColumn.$totalRow)->getNumberFormat()->setFormatCode(self::MONEY);
+        $sheet->freezePane('A5');
+    }
+
+    private function title(int $size): array
+    {
+        return ['font' => ['bold' => true, 'size' => $size, 'color' => ['rgb' => 'FFFFFF']], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::NAVY]], 'alignment' => ['vertical' => Alignment::VERTICAL_CENTER]];
+    }
+
+    private function header(): array
+    {
+        return ['font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::NAVY]]];
+    }
+
+    private function card(): array
+    {
+        return ['fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::PALE]], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER], 'borders' => ['outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::BORDER]]]];
+    }
+
+    private function page($sheet, string $area): void
+    {
+        $sheet->setShowGridlines(false);
+        $sheet->getSheetView()->setZoomScale(90);
+        $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4)->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setFitToWidth(1)->setFitToHeight(0)->setPrintArea($area);
+        $sheet->getHeaderFooter()->setOddFooter('&LSupun Group ERP&CConfidential business report&RPage &P of &N');
+    }
 }

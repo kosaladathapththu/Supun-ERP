@@ -1,4 +1,61 @@
 <?php
+
 namespace App\Services;
-use App\Models\{DebitNote,GoodsReceivedNote,Product,PurchaseReturn,PurchaseReturnItem,SupplierInvoice};use Illuminate\Support\Facades\DB;use Illuminate\Validation\ValidationException;
-class PurchaseReturnService{public function post(GoodsReceivedNote $grn,array $data,$user):PurchaseReturn{return DB::transaction(function()use($grn,$data,$user){$grn=GoodsReceivedNote::with('items.product')->where('company_id',$user->company_id)->lockForUpdate()->findOrFail($grn->id);$prepared=[];$total='0';foreach($grn->items as $item){$qty=(string)($data['items'][$item->id]['quantity']??0);if(bccomp($qty,'0',4)<=0)continue;$returned=(string)PurchaseReturnItem::where('goods_received_note_item_id',$item->id)->sum('quantity');$remaining=bcsub((string)$item->quantity,$returned,4);if(bccomp($qty,$remaining,4)>0)throw ValidationException::withMessages(['items'=>"{$item->product->name}: return quantity exceeds {$remaining} remaining from this GRN."]);if(bccomp($qty,(string)$item->product->current_quantity,4)>0)throw ValidationException::withMessages(['items'=>"{$item->product->name}: only {$item->product->current_quantity} is currently in stock."]);$line=bcmul($qty,(string)$item->unit_cost,2);$total=bcadd($total,$line,2);$prepared[]=compact('item','qty','line')+['reason_code'=>$data['items'][$item->id]['reason_code']??null];}if(!$prepared)throw ValidationException::withMessages(['items'=>'Enter at least one return quantity.']);$number=app(DocumentNumberService::class)->next($user->company_id,'purchase_return','PR');$return=PurchaseReturn::create(['company_id'=>$user->company_id,'goods_received_note_id'=>$grn->id,'supplier_id'=>$grn->supplier_id,'created_by'=>$user->id,'document_number'=>$number,'return_date'=>now(),'status'=>'posted','total_amount'=>$total,'reason'=>$data['reason'],'posted_at'=>now()]);foreach($prepared as $x){$item=$x['item'];$product=Product::where('company_id',$user->company_id)->lockForUpdate()->findOrFail($item->product_id);$beforeQty=(string)$product->current_quantity;$afterQty=bcsub($beforeQty,$x['qty'],4);$beforeValue=bcmul($beforeQty,(string)$product->average_cost,8);$afterValue=bcsub($beforeValue,bcmul($x['qty'],(string)$item->unit_cost,8),8);$afterCost=bccomp($afterQty,'0',4)>0?bcdiv((string)max(0,(float)$afterValue),$afterQty,4):'0';$product->update(['current_quantity'=>$afterQty,'average_cost'=>$afterCost]);$return->items()->create(['goods_received_note_item_id'=>$item->id,'product_id'=>$item->product_id,'quantity'=>$x['qty'],'unit_cost'=>$item->unit_cost,'line_total'=>$x['line'],'reason_code'=>$x['reason_code']]);DB::table('stock_movements')->insert(['company_id'=>$user->company_id,'product_id'=>$product->id,'stock_location_id'=>$grn->stock_location_id,'created_by'=>$user->id,'movement_at'=>now(),'movement_type'=>'purchase_return','reference_type'=>PurchaseReturn::class,'reference_id'=>$return->id,'reference_number'=>$number,'quantity_in'=>0,'quantity_out'=>$x['qty'],'balance_quantity'=>$afterQty,'unit_cost'=>$item->unit_cost,'stock_value'=>bcmul($afterQty,$afterCost,2),'notes'=>$data['reason'],'created_at'=>now(),'updated_at'=>now()]);}$invoice=SupplierInvoice::where('goods_received_note_id',$grn->id)->lockForUpdate()->first();$applied=$invoice?min((float)$total,(float)$invoice->balance_amount):0;if($invoice&&$applied>0){$balance=bcsub((string)$invoice->balance_amount,(string)$applied,2);$invoice->update(['balance_amount'=>$balance,'payment_status'=>bccomp($balance,'0',2)<=0?'paid':'partially_paid']);}DebitNote::create(['company_id'=>$user->company_id,'supplier_id'=>$grn->supplier_id,'purchase_return_id'=>$return->id,'created_by'=>$user->id,'document_number'=>app(DocumentNumberService::class)->next($user->company_id,'debit_note','DN'),'note_date'=>now(),'amount'=>$total,'applied_amount'=>$applied,'status'=>$applied<=0?'available':($applied<(float)$total?'partially_applied':'applied'),'reason'=>$data['reason']]);app(JournalPostingService::class)->post($user->company_id,now()->toDateString(),PurchaseReturn::class,$return->id,$number,"Purchase return {$number}",[['account_code'=>'2100','debit'=>$total,'supplier_id'=>$grn->supplier_id],['account_code'=>'1140','credit'=>$total]],$user->id);return $return;});}}
+
+use App\Models\DebitNote;
+use App\Models\GoodsReceivedNote;
+use App\Models\Product;
+use App\Models\PurchaseReturn;
+use App\Models\PurchaseReturnItem;
+use App\Models\SupplierInvoice;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class PurchaseReturnService
+{
+    public function post(GoodsReceivedNote $grn, array $data, $user): PurchaseReturn
+    {
+        return DB::transaction(function () use ($grn, $data, $user) {
+        $grn = GoodsReceivedNote::with('items.product')->where('company_id', $user->company_id)->lockForUpdate()->findOrFail($grn->id);
+        $prepared = [];
+        $total = '0';
+        foreach ($grn->items as $item) {
+        $qty = (string) ($data['items'][$item->id]['quantity'] ?? 0);
+        if (bccomp($qty, '0', 4) <= 0) {
+        continue;
+        }$returned = (string) PurchaseReturnItem::where('goods_received_note_item_id', $item->id)->sum('quantity');
+        $remaining = bcsub((string) $item->quantity, $returned, 4);
+        if (bccomp($qty, $remaining, 4) > 0) {
+        throw ValidationException::withMessages(['items' => "{$item->product->name}: return quantity exceeds {$remaining} remaining from this GRN."]);
+        }if (bccomp($qty, (string) $item->product->current_quantity, 4) > 0) {
+        throw ValidationException::withMessages(['items' => "{$item->product->name}: only {$item->product->current_quantity} is currently in stock."]);
+        }$line = bcmul($qty, (string) $item->unit_cost, 2);
+        $total = bcadd($total, $line, 2);
+        $prepared[] = compact('item', 'qty', 'line') + ['reason_code' => $data['items'][$item->id]['reason_code'] ?? null];
+        }if (! $prepared) {
+        throw ValidationException::withMessages(['items' => 'Enter at least one return quantity.']);
+        }$number = app(DocumentNumberService::class)->next($user->company_id, 'purchase_return', 'PR');
+        $return = PurchaseReturn::create(['company_id' => $user->company_id, 'goods_received_note_id' => $grn->id, 'supplier_id' => $grn->supplier_id, 'created_by' => $user->id, 'document_number' => $number, 'return_date' => now(), 'status' => 'posted', 'total_amount' => $total, 'reason' => $data['reason'], 'posted_at' => now()]);
+        foreach ($prepared as $x) {
+        $item = $x['item'];
+        $product = Product::where('company_id', $user->company_id)->lockForUpdate()->findOrFail($item->product_id);
+        $beforeQty = (string) $product->current_quantity;
+        $afterQty = bcsub($beforeQty, $x['qty'], 4);
+        $beforeValue = bcmul($beforeQty, (string) $product->average_cost, 8);
+        $afterValue = bcsub($beforeValue, bcmul($x['qty'], (string) $item->unit_cost, 8), 8);
+        $afterCost = bccomp($afterQty, '0', 4) > 0 ? bcdiv((string) max(0, (float) $afterValue), $afterQty, 4) : '0';
+        $product->update(['current_quantity' => $afterQty, 'average_cost' => $afterCost]);
+        $return->items()->create(['goods_received_note_item_id' => $item->id, 'product_id' => $item->product_id, 'quantity' => $x['qty'], 'unit_cost' => $item->unit_cost, 'line_total' => $x['line'], 'reason_code' => $x['reason_code']]);
+        DB::table('stock_movements')->insert(['company_id' => $user->company_id, 'product_id' => $product->id, 'stock_location_id' => $grn->stock_location_id, 'created_by' => $user->id, 'movement_at' => now(), 'movement_type' => 'purchase_return', 'reference_type' => PurchaseReturn::class, 'reference_id' => $return->id, 'reference_number' => $number, 'quantity_in' => 0, 'quantity_out' => $x['qty'], 'balance_quantity' => $afterQty, 'unit_cost' => $item->unit_cost, 'stock_value' => bcmul($afterQty, $afterCost, 2), 'notes' => $data['reason'], 'created_at' => now(), 'updated_at' => now()]);
+        }$invoice = SupplierInvoice::where('goods_received_note_id', $grn->id)->lockForUpdate()->first();
+        $applied = $invoice ? min((float) $total, (float) $invoice->balance_amount) : 0;
+        if ($invoice && $applied > 0) {
+        $balance = bcsub((string) $invoice->balance_amount, (string) $applied, 2);
+        $invoice->update(['balance_amount' => $balance, 'payment_status' => bccomp($balance, '0', 2) <= 0 ? 'paid' : 'partially_paid']);
+        }DebitNote::create(['company_id' => $user->company_id, 'supplier_id' => $grn->supplier_id, 'purchase_return_id' => $return->id, 'created_by' => $user->id, 'document_number' => app(DocumentNumberService::class)->next($user->company_id, 'debit_note', 'DN'), 'note_date' => now(), 'amount' => $total, 'applied_amount' => $applied, 'status' => $applied <= 0 ? 'available' : ($applied < (float) $total ? 'partially_applied' : 'applied'), 'reason' => $data['reason']]);
+        app(JournalPostingService::class)->post($user->company_id, now()->toDateString(), PurchaseReturn::class, $return->id, $number, "Purchase return {$number}", [['account_code' => '2100', 'debit' => $total, 'supplier_id' => $grn->supplier_id], ['account_code' => '1140', 'credit' => $total]], $user->id);
+
+        return $return;
+        });
+    }
+}

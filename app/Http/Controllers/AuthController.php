@@ -10,12 +10,18 @@ use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function create(): View { return view('auth.login'); }
+    public function create(): View
+    {
+        return view('auth.login');
+    }
 
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-        if (!$request->user()->password_changed_at) return redirect()->route('password.edit');
+        if (! $request->user()->password_changed_at) {
+            return redirect()->route('password.edit');
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 
@@ -24,6 +30,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 }

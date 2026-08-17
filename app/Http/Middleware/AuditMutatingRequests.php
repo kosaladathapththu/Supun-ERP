@@ -1,3 +1,21 @@
 <?php
-namespace App\Http\Middleware;use App\Models\AuditLog;use Closure;use Illuminate\Http\Request;
-class AuditMutatingRequests{public function handle(Request $request,Closure $next){$response=$next($request);if(!in_array($request->method(),['GET','HEAD','OPTIONS'])&&\Schema::hasTable('audit_logs')){$user=$request->user();AuditLog::create(['company_id'=>$user?->company_id,'user_id'=>$user?->id,'occurred_at'=>now(),'event'=>$request->route()?->getName()??'request','route_name'=>$request->route()?->getName(),'method'=>$request->method(),'url'=>$request->fullUrl(),'ip_address'=>$request->ip(),'user_agent'=>substr((string)$request->userAgent(),0,500),'response_status'=>$response->getStatusCode(),'metadata'=>['input_keys'=>array_values(array_diff(array_keys($request->except(['password','password_confirmation','_token'])),['password']))]]);}return $response;}}
+
+namespace App\Http\Middleware;
+
+use App\Models\AuditLog;
+use Closure;
+use Illuminate\Http\Request;
+
+class AuditMutatingRequests
+{
+    public function handle(Request $request, Closure $next)
+    {
+        $response = $next($request);
+        if (! in_array($request->method(), ['GET', 'HEAD', 'OPTIONS']) && \Schema::hasTable('audit_logs')) {
+            $user = $request->user();
+            AuditLog::create(['company_id' => $user?->company_id, 'user_id' => $user?->id, 'occurred_at' => now(), 'event' => $request->route()?->getName() ?? 'request', 'route_name' => $request->route()?->getName(), 'method' => $request->method(), 'url' => $request->fullUrl(), 'ip_address' => $request->ip(), 'user_agent' => substr((string) $request->userAgent(), 0, 500), 'response_status' => $response->getStatusCode(), 'metadata' => ['input_keys' => array_values(array_diff(array_keys($request->except(['password', 'password_confirmation', '_token'])), ['password']))]]);
+        }
+
+return $response;
+    }
+}

@@ -14,7 +14,18 @@ class CashierSession extends Model
         'closed_at' => 'datetime',
     ];
 
-    public function user() { return $this->belongsTo(User::class); }
-    public function openedBy() { return $this->belongsTo(User::class, 'opened_by'); }
-    public function closedBy() { return $this->belongsTo(User::class, 'closed_by'); }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function openedBy()
+    {
+        return $this->belongsTo(User::class, 'opened_by');
+    }
+
+    public function closedBy()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
 }

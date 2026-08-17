@@ -1,4 +1,51 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Http\Requests\DeliveryRequest;use App\Models\{SalesOrder,DeliveryNote};use App\Services\SalesDocumentWorkflowService;use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;
-class SalesOrderController extends Controller{public function index(Request $r){return view('sales-orders.index',['orders'=>SalesOrder::with(['customer','quotation'])->where('company_id',$r->user()->company_id)->latest('order_date')->paginate(20)]);}public function show(Request $r,$sales_order){$order=SalesOrder::with(['customer','quotation','items.product','deliveries.sale'])->where('company_id',$r->user()->company_id)->findOrFail($sales_order);return view('sales-orders.show',compact('order'));}public function deliver(Request $r,$sales_order){$order=SalesOrder::with(['customer','items.product'])->where('company_id',$r->user()->company_id)->findOrFail($sales_order);return view('sales-orders.deliver',compact('order'));}public function storeDelivery(DeliveryRequest $r,$sales_order,SalesDocumentWorkflowService $s){$order=SalesOrder::where('company_id',$r->user()->company_id)->findOrFail($sales_order);$delivery=$s->deliverAndInvoice($order,$r->validated(),$r->user());return redirect()->route('delivery-notes.show',$delivery)->with('success','Delivery note and linked sales invoice posted.');}public function deliveries(Request $r){return view('delivery-notes.index',['deliveries'=>DeliveryNote::with(['customer','order','sale'])->where('company_id',$r->user()->company_id)->latest('delivery_date')->paginate(20)]);}public function showDelivery(Request $r,$delivery_note){$delivery=DeliveryNote::with(['customer','order','sale','items.product'])->where('company_id',$r->user()->company_id)->findOrFail($delivery_note);return view('delivery-notes.show',compact('delivery'));}}
+
+use App\Http\Requests\DeliveryRequest;
+use App\Models\DeliveryNote;
+use App\Models\SalesOrder;
+use App\Services\SalesDocumentWorkflowService;
+use Illuminate\Http\Request;
+
+class SalesOrderController extends Controller
+{
+    public function index(Request $r)
+    {
+        return view('sales-orders.index', ['orders' => SalesOrder::with(['customer', 'quotation'])->where('company_id', $r->user()->company_id)->latest('order_date')->paginate(20)]);
+    }
+
+    public function show(Request $r, $sales_order)
+    {
+        $order = SalesOrder::with(['customer', 'quotation', 'items.product', 'deliveries.sale'])->where('company_id', $r->user()->company_id)->findOrFail($sales_order);
+
+        return view('sales-orders.show', compact('order'));
+    }
+
+    public function deliver(Request $r, $sales_order)
+    {
+        $order = SalesOrder::with(['customer', 'items.product'])->where('company_id', $r->user()->company_id)->findOrFail($sales_order);
+
+        return view('sales-orders.deliver', compact('order'));
+    }
+
+    public function storeDelivery(DeliveryRequest $r, $sales_order, SalesDocumentWorkflowService $s)
+    {
+        $order = SalesOrder::where('company_id', $r->user()->company_id)->findOrFail($sales_order);
+        $delivery = $s->deliverAndInvoice($order, $r->validated(), $r->user());
+
+        return redirect()->route('delivery-notes.show', $delivery)->with('success', 'Delivery note and linked sales invoice posted.');
+    }
+
+    public function deliveries(Request $r)
+    {
+        return view('delivery-notes.index', ['deliveries' => DeliveryNote::with(['customer', 'order', 'sale'])->where('company_id', $r->user()->company_id)->latest('delivery_date')->paginate(20)]);
+    }
+
+    public function showDelivery(Request $r, $delivery_note)
+    {
+        $delivery = DeliveryNote::with(['customer', 'order', 'sale', 'items.product'])->where('company_id', $r->user()->company_id)->findOrFail($delivery_note);
+
+        return view('delivery-notes.show', compact('delivery'));
+    }
+}

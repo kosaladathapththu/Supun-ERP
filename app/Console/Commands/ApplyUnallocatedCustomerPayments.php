@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 class ApplyUnallocatedCustomerPayments extends Command
 {
     protected $signature = 'receivables:apply-unallocated {--dry-run : Preview without changing records}';
+
     protected $description = 'Apply posted customer payments to the oldest outstanding credit invoices';
 
     public function handle(JournalPostingService $journals): int
@@ -20,6 +21,7 @@ class ApplyUnallocatedCustomerPayments extends Command
 
         if ($receipts->isEmpty()) {
             $this->info('No unallocated customer payments found.');
+
             return self::SUCCESS;
         }
 
@@ -31,7 +33,9 @@ class ApplyUnallocatedCustomerPayments extends Command
                 ->orderByRaw('due_date IS NULL')->orderBy('due_date')->orderBy('sale_date')->get();
 
             foreach ($sales as $sale) {
-                if (bccomp($available, '0', 2) <= 0) break;
+                if (bccomp($available, '0', 2) <= 0) {
+                    break;
+                }
                 $amount = bccomp($available, (string) $sale->balance_amount, 2) > 0 ? (string) $sale->balance_amount : $available;
                 $applications[] = [$sale, $amount];
                 $available = bcsub($available, $amount, 2);
@@ -39,7 +43,9 @@ class ApplyUnallocatedCustomerPayments extends Command
 
             $applied = bcsub((string) $receipt->unapplied_amount, $available, 2);
             $this->line("{$receipt->receipt_number}: apply Rs. {$applied}; remaining unallocated Rs. {$available}");
-            if ($this->option('dry-run') || bccomp($applied, '0', 2) <= 0) continue;
+            if ($this->option('dry-run') || bccomp($applied, '0', 2) <= 0) {
+                continue;
+            }
 
             DB::transaction(function () use ($receipt, $applications, $applied, $available, $journals) {
                 $lockedReceipt = CustomerReceipt::lockForUpdate()->findOrFail($receipt->id);
@@ -62,6 +68,7 @@ class ApplyUnallocatedCustomerPayments extends Command
         }
 
         $this->info($this->option('dry-run') ? 'Preview complete; no records changed.' : 'Customer payments applied successfully.');
+
         return self::SUCCESS;
     }
 }

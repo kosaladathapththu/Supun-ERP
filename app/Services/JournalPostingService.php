@@ -1,4 +1,47 @@
 <?php
+
 namespace App\Services;
-use App\Models\{Account,AccountingPeriod,JournalEntry};use Illuminate\Support\Facades\DB;use Illuminate\Validation\ValidationException;
-class JournalPostingService{public function post(int $companyId,string $date,string $sourceType,int $sourceId,string $reference,string $description,array $lines,int $userId):JournalEntry{return DB::transaction(function()use($companyId,$date,$sourceType,$sourceId,$reference,$description,$lines,$userId){$period=AccountingPeriod::whereHas('financialYear',fn($q)=>$q->where('company_id',$companyId))->whereDate('starts_on','<=',$date)->whereDate('ends_on','>=',$date)->first();if(!$period)throw ValidationException::withMessages(['entry_date'=>'No accounting period exists for this date.']);if($period->status!=='open')throw ValidationException::withMessages(['entry_date'=>'The accounting period is closed.']);$debits=$credits='0';$prepared=[];foreach($lines as $line){$debit=(string)($line['debit']??0);$credit=(string)($line['credit']??0);if((bccomp($debit,'0',2)>0)===(bccomp($credit,'0',2)>0))throw ValidationException::withMessages(['journal'=>'Each journal line must contain either a debit or a credit.']);$account=Account::where('company_id',$companyId)->where('code',$line['account_code'])->where('is_active',1)->first();if(!$account)throw ValidationException::withMessages(['journal'=>"Account {$line['account_code']} is unavailable."]);$debits=bcadd($debits,$debit,2);$credits=bcadd($credits,$credit,2);$prepared[]=[$account,$line,$debit,$credit];}if(!$prepared||bccomp($debits,$credits,2)!==0)throw ValidationException::withMessages(['journal'=>'Journal debits and credits must balance.']);$existing=JournalEntry::where(['company_id'=>$companyId,'source_type'=>$sourceType,'source_id'=>$sourceId])->first();if($existing)return $existing;$entry=JournalEntry::create(['company_id'=>$companyId,'accounting_period_id'=>$period->id,'created_by'=>$userId,'journal_number'=>app(DocumentNumberService::class)->next($companyId,'journal','JV'),'entry_date'=>$date,'source_type'=>$sourceType,'source_id'=>$sourceId,'reference_number'=>$reference,'description'=>$description]);foreach($prepared as [$account,$line,$debit,$credit])$entry->lines()->create(['account_id'=>$account->id,'customer_id'=>$line['customer_id']??null,'supplier_id'=>$line['supplier_id']??null,'description'=>$line['description']??$description,'debit'=>$debit,'credit'=>$credit]);return $entry;});}}
+
+use App\Models\Account;
+use App\Models\AccountingPeriod;
+use App\Models\JournalEntry;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class JournalPostingService
+{
+    public function post(int $companyId, string $date, string $sourceType, int $sourceId, string $reference, string $description, array $lines, int $userId): JournalEntry
+    {
+        return DB::transaction(function () use ($companyId, $date, $sourceType, $sourceId, $reference, $description, $lines, $userId) {
+        $period = AccountingPeriod::whereHas('financialYear', fn ($q) => $q->where('company_id', $companyId))->whereDate('starts_on', '<=', $date)->whereDate('ends_on', '>=', $date)->first();
+        if (! $period) {
+        throw ValidationException::withMessages(['entry_date' => 'No accounting period exists for this date.']);
+        }if ($period->status !== 'open') {
+        throw ValidationException::withMessages(['entry_date' => 'The accounting period is closed.']);
+        }$debits = $credits = '0';
+        $prepared = [];
+        foreach ($lines as $line) {
+        $debit = (string) ($line['debit'] ?? 0);
+        $credit = (string) ($line['credit'] ?? 0);
+        if ((bccomp($debit, '0', 2) > 0) === (bccomp($credit, '0', 2) > 0)) {
+        throw ValidationException::withMessages(['journal' => 'Each journal line must contain either a debit or a credit.']);
+        }$account = Account::where('company_id', $companyId)->where('code', $line['account_code'])->where('is_active', 1)->first();
+        if (! $account) {
+        throw ValidationException::withMessages(['journal' => "Account {$line['account_code']} is unavailable."]);
+        }$debits = bcadd($debits, $debit, 2);
+        $credits = bcadd($credits, $credit, 2);
+        $prepared[] = [$account, $line, $debit, $credit];
+        }if (! $prepared || bccomp($debits, $credits, 2) !== 0) {
+        throw ValidationException::withMessages(['journal' => 'Journal debits and credits must balance.']);
+        }$existing = JournalEntry::where(['company_id' => $companyId, 'source_type' => $sourceType, 'source_id' => $sourceId])->first();
+        if ($existing) {
+        return $existing;
+        }$entry = JournalEntry::create(['company_id' => $companyId, 'accounting_period_id' => $period->id, 'created_by' => $userId, 'journal_number' => app(DocumentNumberService::class)->next($companyId, 'journal', 'JV'), 'entry_date' => $date, 'source_type' => $sourceType, 'source_id' => $sourceId, 'reference_number' => $reference, 'description' => $description]);
+        foreach ($prepared as [$account,$line,$debit,$credit]) {
+        $entry->lines()->create(['account_id' => $account->id, 'customer_id' => $line['customer_id'] ?? null, 'supplier_id' => $line['supplier_id'] ?? null, 'description' => $line['description'] ?? $description, 'debit' => $debit, 'credit' => $credit]);
+        }
+
+return $entry;
+        });
+    }
+}

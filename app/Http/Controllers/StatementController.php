@@ -1,12 +1,60 @@
 <?php
+
 namespace App\Http\Controllers;
-use App\Services\FinancialStatementService;use Illuminate\Http\Request;
+
+use App\Services\FinancialStatementService;
+use Illuminate\Http\Request;
+
 class StatementController extends Controller
 {
- private function dates(Request $r):array{$to=$r->input('to',now()->toDateString());$from=$r->input('from',date('Y-01-01',strtotime($to)));abort_unless(strtotime($from)!==false&&strtotime($to)!==false&&$from<=$to,422,'Invalid statement date range.');return [$from,$to];}
- public function index(Request $r){[$from,$to]=$this->dates($r);return view('statements.index',compact('from','to'));}
- public function profitLoss(Request $r,FinancialStatementService $s){[$from,$to]=$this->dates($r);$statement=$s->profitLoss($r->user()->company_id,$from,$to);return view('statements.profit-loss',compact('from','to','statement'));}
- public function balanceSheet(Request $r,FinancialStatementService $s){[, $to]=$this->dates($r);$statement=$s->balanceSheet($r->user()->company_id,$to);return view('statements.balance-sheet',compact('to','statement'));}
- public function cashFlow(Request $r,FinancialStatementService $s){[$from,$to]=$this->dates($r);$statement=$s->cashFlow($r->user()->company_id,$from,$to);return view('statements.cash-flow',compact('from','to','statement'));}
- public function reconciliation(Request $r,FinancialStatementService $s){[, $to]=$this->dates($r);$company=$r->user()->company_id;$bs=$s->balanceSheet($company,$to);$balances=$s->balances($company,$to)->keyBy('code');$checks=[['name'=>'Journal debits equal credits','book'=>(float)$balances->sum('raw_debit'),'subledger'=>(float)$balances->sum('raw_credit')],['name'=>'Accounts receivable control vs customer balances','book'=>(float)($balances->get('1130')?->statement_balance??0),'subledger'=>(float)\DB::table('sales')->where('company_id',$company)->where('status','posted')->whereDate('sale_date','<=',$to)->sum('balance_amount')],['name'=>'Accounts payable control vs supplier balances','book'=>(float)($balances->get('2100')?->statement_balance??0),'subledger'=>(float)\DB::table('supplier_invoices')->where('company_id',$company)->where('status','posted')->whereDate('invoice_date','<=',$to)->sum('balance_amount')],['name'=>'Inventory control vs current stock valuation','book'=>(float)($balances->get('1140')?->statement_balance??0),'subledger'=>(float)\DB::table('products')->where('company_id',$company)->whereNull('deleted_at')->selectRaw('SUM(current_quantity * average_cost) total')->value('total')],['name'=>'Balance-sheet equation','book'=>$bs['assets'],'subledger'=>$bs['liabilities_equity']]];return view('statements.reconciliation',compact('to','checks'));}
+    private function dates(Request $r): array
+    {
+        $to = $r->input('to', now()->toDateString());
+        $from = $r->input('from', date('Y-01-01', strtotime($to)));
+        abort_unless(strtotime($from) !== false && strtotime($to) !== false && $from <= $to, 422, 'Invalid statement date range.');
+
+        return [$from, $to];
+    }
+
+    public function index(Request $r)
+    {
+        [$from,$to] = $this->dates($r);
+
+        return view('statements.index', compact('from', 'to'));
+    }
+
+    public function profitLoss(Request $r, FinancialStatementService $s)
+    {
+        [$from,$to] = $this->dates($r);
+        $statement = $s->profitLoss($r->user()->company_id, $from, $to);
+
+        return view('statements.profit-loss', compact('from', 'to', 'statement'));
+    }
+
+    public function balanceSheet(Request $r, FinancialStatementService $s)
+    {
+        [, $to] = $this->dates($r);
+        $statement = $s->balanceSheet($r->user()->company_id, $to);
+
+        return view('statements.balance-sheet', compact('to', 'statement'));
+    }
+
+    public function cashFlow(Request $r, FinancialStatementService $s)
+    {
+        [$from,$to] = $this->dates($r);
+        $statement = $s->cashFlow($r->user()->company_id, $from, $to);
+
+        return view('statements.cash-flow', compact('from', 'to', 'statement'));
+    }
+
+    public function reconciliation(Request $r, FinancialStatementService $s)
+    {
+        [, $to] = $this->dates($r);
+        $company = $r->user()->company_id;
+        $bs = $s->balanceSheet($company, $to);
+        $balances = $s->balances($company, $to)->keyBy('code');
+        $checks = [['name' => 'Journal debits equal credits', 'book' => (float) $balances->sum('raw_debit'), 'subledger' => (float) $balances->sum('raw_credit')], ['name' => 'Accounts receivable control vs customer balances', 'book' => (float) ($balances->get('1130')?->statement_balance ?? 0), 'subledger' => (float) \DB::table('sales')->where('company_id', $company)->where('status', 'posted')->whereDate('sale_date', '<=', $to)->sum('balance_amount')], ['name' => 'Accounts payable control vs supplier balances', 'book' => (float) ($balances->get('2100')?->statement_balance ?? 0), 'subledger' => (float) \DB::table('supplier_invoices')->where('company_id', $company)->where('status', 'posted')->whereDate('invoice_date', '<=', $to)->sum('balance_amount')], ['name' => 'Inventory control vs current stock valuation', 'book' => (float) ($balances->get('1140')?->statement_balance ?? 0), 'subledger' => (float) \DB::table('products')->where('company_id', $company)->whereNull('deleted_at')->selectRaw('SUM(current_quantity * average_cost) total')->value('total')], ['name' => 'Balance-sheet equation', 'book' => $bs['assets'], 'subledger' => $bs['liabilities_equity']]];
+
+        return view('statements.reconciliation', compact('to', 'checks'));
+    }
 }

@@ -1,7 +1,10 @@
 <?php
+
 namespace App\Services;
 
-use App\Models\{Sale, SaleReturn, SalesExchange};
+use App\Models\Sale;
+use App\Models\SaleReturn;
+use App\Models\SalesExchange;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -34,12 +37,12 @@ class SalesExchangeService
                 'items' => $data['replacement_items'],
             ], $user);
 
-            $applied = bccomp((string)$credit->amount, (string)$replacement->grand_total, 2) > 0
-                ? (string)$replacement->grand_total : (string)$credit->amount;
-            $balance = bcsub((string)$replacement->grand_total, $applied, 2);
+            $applied = bccomp((string) $credit->amount, (string) $replacement->grand_total, 2) > 0
+                ? (string) $replacement->grand_total : (string) $credit->amount;
+            $balance = bcsub((string) $replacement->grand_total, $applied, 2);
             $credit->update([
                 'applied_amount' => $applied,
-                'status' => bccomp($applied, (string)$credit->amount, 2) >= 0 ? 'applied' : 'partially_applied',
+                'status' => bccomp($applied, (string) $credit->amount, 2) >= 0 ? 'applied' : 'partially_applied',
             ]);
             $replacement->update([
                 'paid_amount' => $applied,
@@ -69,17 +72,20 @@ class SalesExchangeService
     {
         return DB::transaction(function () use ($sale, $reason, $user) {
             $sale = Sale::with('items')->where('company_id', $user->company_id)->lockForUpdate()->findOrFail($sale->id);
-            if ($sale->status !== 'posted') throw ValidationException::withMessages(['sale' => 'This invoice is not available for voiding.']);
-            if (bccomp((string)$sale->paid_amount, '0', 2) !== 0 || $sale->payments()->exists() || DB::table('customer_receipt_allocations')->where('sale_id', $sale->id)->exists()) {
+            if ($sale->status !== 'posted') {
+                throw ValidationException::withMessages(['sale' => 'This invoice is not available for voiding.']);
+            }
+            if (bccomp((string) $sale->paid_amount, '0', 2) !== 0 || $sale->payments()->exists() || DB::table('customer_receipt_allocations')->where('sale_id', $sale->id)->exists()) {
                 throw ValidationException::withMessages(['sale' => 'Paid or allocated invoices cannot be voided. Use a sales return/refund instead.']);
             }
             if (DB::table('sale_returns')->where('sale_id', $sale->id)->exists()) {
                 throw ValidationException::withMessages(['sale' => 'An invoice with existing returns cannot be voided.']);
             }
-            $items = $sale->items->mapWithKeys(fn($item) => [$item->id => ['quantity' => $item->quantity, 'condition' => 'resalable']])->all();
+            $items = $sale->items->mapWithKeys(fn ($item) => [$item->id => ['quantity' => $item->quantity, 'condition' => 'resalable']])->all();
             $return = app(SaleReturnService::class)->post($sale, ['settlement_type' => 'credit_note', 'reason' => 'VOID: '.$reason, 'items' => $items], $user);
             $return->update(['return_type' => 'void']);
             $sale->update(['status' => 'voided', 'payment_status' => 'voided', 'balance_amount' => 0, 'reversed_by' => $user->id, 'reversed_at' => now(), 'reversal_reason' => $reason]);
+
             return $return;
         });
     }

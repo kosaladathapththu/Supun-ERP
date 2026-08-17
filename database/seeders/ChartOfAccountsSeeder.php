@@ -26,7 +26,7 @@ class ChartOfAccountsSeeder extends Seeder
             $parentId = $parentCode ? DB::table('accounts')->where('company_id', $companyId)->where('code', $parentCode)->value('id') : null;
             DB::table('accounts')->updateOrInsert(
                 ['company_id' => $companyId, 'code' => $code],
-                ['account_type_id' => DB::table('account_types')->where('code', $type)->value('id'), 'parent_id' => $parentId, 'name' => $name, 'is_control_account' => $control, 'allow_manual_posting' => !$control, 'is_active' => true, 'updated_at' => now(), 'created_at' => now()]
+                ['account_type_id' => DB::table('account_types')->where('code', $type)->value('id'), 'parent_id' => $parentId, 'name' => $name, 'is_control_account' => $control, 'allow_manual_posting' => ! $control, 'is_active' => true, 'updated_at' => now(), 'created_at' => now()]
             );
         }
     }

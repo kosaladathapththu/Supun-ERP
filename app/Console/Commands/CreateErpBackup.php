@@ -1,4 +1,38 @@
 <?php
+
 namespace App\Console\Commands;
-use App\Models\User;use App\Services\DatabaseBackupService;use Illuminate\Console\Command;
-class CreateErpBackup extends Command{protected $signature='erp:backup {--user=admin@supun-erp.local : User recorded as backup creator}';protected $description='Create and checksum a protected MySQL ERP backup';public function handle(DatabaseBackupService $service):int{$user=User::where('email',$this->option('user'))->where('is_active',1)->first();if(!$user){$this->error('Active backup user not found.');return self::FAILURE;}try{$run=$service->create($user);$this->info("Backup verified: {$run->filename} ({$run->size_bytes} bytes)");$this->line("SHA-256: {$run->checksum}");return self::SUCCESS;}catch(\Throwable $e){$this->error($e->getMessage());$detail=\App\Models\BackupRun::where('company_id',$user->company_id)->latest('id')->value('error_message');if($detail)$this->line($detail);return self::FAILURE;}}}
+
+use App\Models\User;
+use App\Services\DatabaseBackupService;
+use Illuminate\Console\Command;
+
+class CreateErpBackup extends Command
+{
+    protected $signature = 'erp:backup {--user=admin@supun-erp.local : User recorded as backup creator}';
+
+    protected $description = 'Create and checksum a protected MySQL ERP backup';
+
+    public function handle(DatabaseBackupService $service): int
+    {
+        $user = User::where('email', $this->option('user'))->where('is_active', 1)->first();
+        if (! $user) {
+            $this->error('Active backup user not found.');
+
+            return self::FAILURE;
+        }try {
+            $run = $service->create($user);
+            $this->info("Backup verified: {$run->filename} ({$run->size_bytes} bytes)");
+            $this->line("SHA-256: {$run->checksum}");
+
+            return self::SUCCESS;
+        } catch(\Throwable $e) {
+            $this->error($e->getMessage());
+            $detail = \App\Models\BackupRun::where('company_id', $user->company_id)->latest('id')->value('error_message');
+            if ($detail) {
+                $this->line($detail);
+            }
+
+return self::FAILURE;
+        }
+    }
+}

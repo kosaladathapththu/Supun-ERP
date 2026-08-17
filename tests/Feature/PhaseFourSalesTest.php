@@ -1,12 +1,59 @@
 <?php
+
 namespace Tests\Feature;
-use App\Models\{Product,Sale,User};use Database\Seeders\DatabaseSeeder;use Illuminate\Foundation\Testing\RefreshDatabase;use Illuminate\Support\Facades\DB;use Tests\TestCase;
+
+use App\Models\Product;
+use App\Models\Sale;
+use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
 class PhaseFourSalesTest extends TestCase
 {
- use RefreshDatabase;
- protected User $admin; protected Product $product;
- protected function setUp():void{parent::setUp();$this->seed(DatabaseSeeder::class);$this->admin=User::where('email','admin@supun-erp.local')->firstOrFail();$this->actingAs($this->admin);$c=DB::table('companies')->value('id');$cat=DB::table('product_categories')->insertGetId(['company_id'=>$c,'code'=>'SALE','name'=>'Sales','is_active'=>1,'created_at'=>now(),'updated_at'=>now()]);$this->product=Product::create(['company_id'=>$c,'product_category_id'=>$cat,'unit_id'=>DB::table('units')->where('code','PCS')->value('id'),'item_code'=>'SALE-001','name'=>'Sale Test','average_cost'=>1500000,'current_quantity'=>10,'minimum_stock'=>0,'reorder_level'=>0,'warranty_months'=>0,'serial_tracking'=>0,'is_active'=>1]);}
- public function test_cash_sale_posts_stock_historical_cost_profit_and_receipt():void{$customer=DB::table('customers')->where('code','WALK-IN')->value('id');$this->post(route('sales.store'),['customer_id'=>$customer,'channel'=>'retail','payment_type'=>'cash','paid_amount'=>100,'payment_method'=>'qr','payment_reference'=>'QR-001','discount_amount'=>0,'items'=>[['product_id'=>$this->product->id,'quantity'=>1,'unit_price'=>100]]])->assertSessionHasNoErrors();$sale=Sale::firstOrFail();$this->assertSame('paid',$sale->payment_status);$this->assertEqualsWithDelta(9,(float)$this->product->fresh()->current_quantity,.0001);$this->assertDatabaseHas('sale_items',['sale_id'=>$sale->id,'unit_cost'=>1500000]);$this->assertDatabaseCount('sale_payments',1);$this->assertDatabaseHas('stock_movements',['reference_number'=>$sale->document_number,'movement_type'=>'sale']);$this->get(route('sales.show',$sale))->assertOk()->assertSee('Customer information and instructions');}
- public function test_credit_sale_keeps_outstanding_balance_and_due_date():void{$customer=DB::table('customers')->where('code','WALK-IN')->value('id');$this->post(route('sales.store'),['customer_id'=>$customer,'channel'=>'wholesale','payment_type'=>'credit','due_date'=>'2026-09-10','paid_amount'=>25,'payment_method'=>'cash','discount_amount'=>0,'items'=>[['product_id'=>$this->product->id,'quantity'=>1,'unit_price'=>100]]])->assertSessionHasNoErrors();$sale=Sale::firstOrFail();$this->assertDatabaseHas('sales',['id'=>$sale->id,'channel'=>'wholesale','payment_type'=>'credit','paid_amount'=>25,'balance_amount'=>75,'payment_status'=>'partially_paid']);$this->get(route('sales.show',$sale))->assertOk()->assertSee('WHOLESALE SALES INVOICE');}
-    public function test_pos_lists_products_even_when_stock_is_zero():void{$this->product->update(['current_quantity'=>0]);$this->get(route('sales.cash.create'))->assertOk()->assertSee('SALE-001')->assertSee('data-stock="0.0000"',false)->assertSee('WHOLESALE');}
+    use RefreshDatabase;
+
+    protected User $admin;
+
+    protected Product $product;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DatabaseSeeder::class);
+        $this->admin = User::where('email', 'admin@supun-erp.local')->firstOrFail();
+        $this->actingAs($this->admin);
+        $c = DB::table('companies')->value('id');
+        $cat = DB::table('product_categories')->insertGetId(['company_id' => $c, 'code' => 'SALE', 'name' => 'Sales', 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $this->product = Product::create(['company_id' => $c, 'product_category_id' => $cat, 'unit_id' => DB::table('units')->where('code', 'PCS')->value('id'), 'item_code' => 'SALE-001', 'name' => 'Sale Test', 'average_cost' => 1500000, 'current_quantity' => 10, 'minimum_stock' => 0, 'reorder_level' => 0, 'warranty_months' => 0, 'serial_tracking' => 0, 'is_active' => 1]);
+    }
+
+    public function test_cash_sale_posts_stock_historical_cost_profit_and_receipt(): void
+    {
+        $customer = DB::table('customers')->where('code', 'WALK-IN')->value('id');
+        $this->post(route('sales.store'), ['customer_id' => $customer, 'channel' => 'retail', 'payment_type' => 'cash', 'paid_amount' => 100, 'payment_method' => 'qr', 'payment_reference' => 'QR-001', 'discount_amount' => 0, 'items' => [['product_id' => $this->product->id, 'quantity' => 1, 'unit_price' => 100]]])->assertSessionHasNoErrors();
+        $sale = Sale::firstOrFail();
+        $this->assertSame('paid', $sale->payment_status);
+        $this->assertEqualsWithDelta(9, (float) $this->product->fresh()->current_quantity, .0001);
+        $this->assertDatabaseHas('sale_items', ['sale_id' => $sale->id, 'unit_cost' => 1500000]);
+        $this->assertDatabaseCount('sale_payments', 1);
+        $this->assertDatabaseHas('stock_movements', ['reference_number' => $sale->document_number, 'movement_type' => 'sale']);
+        $this->get(route('sales.show', $sale))->assertOk()->assertSee('Customer information and instructions');
+    }
+
+    public function test_credit_sale_keeps_outstanding_balance_and_due_date(): void
+    {
+        $customer = DB::table('customers')->where('code', 'WALK-IN')->value('id');
+        $this->post(route('sales.store'), ['customer_id' => $customer, 'channel' => 'wholesale', 'payment_type' => 'credit', 'due_date' => '2026-09-10', 'paid_amount' => 25, 'payment_method' => 'cash', 'discount_amount' => 0, 'items' => [['product_id' => $this->product->id, 'quantity' => 1, 'unit_price' => 100]]])->assertSessionHasNoErrors();
+        $sale = Sale::firstOrFail();
+        $this->assertDatabaseHas('sales', ['id' => $sale->id, 'channel' => 'wholesale', 'payment_type' => 'credit', 'paid_amount' => 25, 'balance_amount' => 75, 'payment_status' => 'partially_paid']);
+        $this->get(route('sales.show', $sale))->assertOk()->assertSee('WHOLESALE SALES INVOICE');
+    }
+
+       public function test_pos_lists_products_even_when_stock_is_zero(): void
+       {
+           $this->product->update(['current_quantity' => 0]);
+           $this->get(route('sales.cash.create'))->assertOk()->assertSee('SALE-001')->assertSee('data-stock="0.0000"', false)->assertSee('WHOLESALE');
+       }
 }

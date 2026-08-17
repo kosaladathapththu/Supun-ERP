@@ -1,3 +1,39 @@
 <?php
-namespace App\Http\Controllers;use App\Models\{Account,Expense};use App\Services\{DocumentNumberService,JournalPostingService};use Illuminate\Http\Request;use Illuminate\Support\Facades\DB;use Illuminate\Validation\Rule;
-class ExpenseController extends Controller{public function index(Request $r){return view('expenses.index',['expenses'=>Expense::with('account')->where('company_id',$r->user()->company_id)->latest('expense_date')->paginate(20)]);}public function create(Request $r){return view('expenses.create',['accounts'=>Account::where('company_id',$r->user()->company_id)->whereBetween('code',['6000','6999'])->where('allow_manual_posting',1)->where('is_active',1)->orderBy('code')->get()]);}public function store(Request $r){$c=$r->user()->company_id;$data=$r->validate(['expense_date'=>['required','date'],'account_id'=>['required',Rule::exists('accounts','id')->where(fn($q)=>$q->where('company_id',$c)->where('is_active',1))],'payee'=>['required','string','max:150'],'payment_method'=>['required',Rule::in(['cash','cheque','bank_transfer','online_payment'])],'amount'=>['required','numeric','gt:0'],'reference'=>['nullable','string','max:150'],'description'=>['required','string','max:1000']]);$expense=DB::transaction(function()use($data,$r,$c){$e=Expense::create($data+['company_id'=>$c,'created_by'=>$r->user()->id,'document_number'=>app(DocumentNumberService::class)->next($c,'expense','EXP')]);$account=Account::findOrFail($data['account_id']);app(JournalPostingService::class)->post($c,$data['expense_date'],Expense::class,$e->id,$e->document_number,"Expense {$e->document_number}",[['account_code'=>$account->code,'debit'=>$data['amount']],['account_code'=>$data['payment_method']==='cash'?'1110':'1120','credit'=>$data['amount']]],$r->user()->id);return $e;});return redirect()->route('expenses.index')->with('success','Expense posted successfully.');}}
+
+namespace App\Http\Controllers;
+
+use App\Models\Account;
+use App\Models\Expense;
+use App\Services\DocumentNumberService;
+use App\Services\JournalPostingService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+
+class ExpenseController extends Controller
+{
+    public function index(Request $r)
+    {
+        return view('expenses.index', ['expenses' => Expense::with('account')->where('company_id', $r->user()->company_id)->latest('expense_date')->paginate(20)]);
+    }
+
+    public function create(Request $r)
+    {
+        return view('expenses.create', ['accounts' => Account::where('company_id', $r->user()->company_id)->whereBetween('code', ['6000', '6999'])->where('allow_manual_posting', 1)->where('is_active', 1)->orderBy('code')->get()]);
+    }
+
+    public function store(Request $r)
+    {
+        $c = $r->user()->company_id;
+        $data = $r->validate(['expense_date' => ['required', 'date'], 'account_id' => ['required', Rule::exists('accounts', 'id')->where(fn ($q) => $q->where('company_id', $c)->where('is_active', 1))], 'payee' => ['required', 'string', 'max:150'], 'payment_method' => ['required', Rule::in(['cash', 'cheque', 'bank_transfer', 'online_payment'])], 'amount' => ['required', 'numeric', 'gt:0'], 'reference' => ['nullable', 'string', 'max:150'], 'description' => ['required', 'string', 'max:1000']]);
+        $expense = DB::transaction(function () use ($data, $r, $c) {
+        $e = Expense::create($data + ['company_id' => $c, 'created_by' => $r->user()->id, 'document_number' => app(DocumentNumberService::class)->next($c, 'expense', 'EXP')]);
+        $account = Account::findOrFail($data['account_id']);
+        app(JournalPostingService::class)->post($c, $data['expense_date'], Expense::class, $e->id, $e->document_number, "Expense {$e->document_number}", [['account_code' => $account->code, 'debit' => $data['amount']], ['account_code' => $data['payment_method'] === 'cash' ? '1110' : '1120', 'credit' => $data['amount']]], $r->user()->id);
+
+        return $e;
+        });
+
+        return redirect()->route('expenses.index')->with('success', 'Expense posted successfully.');
+    }
+}

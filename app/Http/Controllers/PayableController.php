@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{DebitNote, Supplier, SupplierInvoice, SupplierPayment};
-use App\Services\SupplierPaymentService;
+use App\Models\DebitNote;
+use App\Models\Supplier;
+use App\Models\SupplierInvoice;
+use App\Models\SupplierPayment;
 use App\Services\PayableXlsxExportService;
+use App\Services\SupplierPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -64,13 +67,15 @@ class PayableController extends Controller
     public function history(Request $request)
     {
         $invoices = SupplierInvoice::with(['supplier', 'grn'])->where('company_id', $request->user()->company_id)->latest('invoice_date')->paginate(20);
+
         return view('payables.history', compact('invoices'));
     }
 
     public function exportExcel(Request $request, PayableXlsxExportService $exporter)
     {
         $path = $exporter->create($request->user()->company_id, $request->user()->name);
-        return response()->download($path, 'supplier-payables-'.now()->format('Ymd-His').'.xlsx', ['Content-Type'=>'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
+
+        return response()->download($path, 'supplier-payables-'.now()->format('Ymd-His').'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
     }
 
     public function create(Request $request)
@@ -108,7 +113,9 @@ class PayableController extends Controller
             ->get();
         $data['allocations'] = [];
         foreach ($bills as $bill) {
-            if ($remaining <= 0) break;
+            if ($remaining <= 0) {
+                break;
+            }
             $apply = min($remaining, (float) $bill->balance_amount);
             $data['allocations'][$bill->id] = number_format($apply, 2, '.', '');
             $remaining -= $apply;
