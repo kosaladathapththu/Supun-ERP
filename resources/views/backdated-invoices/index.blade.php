@@ -1,19 +1,19 @@
 @extends('layouts.app')
-@section('title','Backdated Invoices')
+@section('title',($approvalMode??false)?'Backdated Invoice Approvals':'Backdated Invoices')
 @section('content')
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
-    <div><h1 class="h3 page-title">Backdated Invoices</h1><p class="text-muted mb-0">Accountant requests; CFO approves before anything is posted.</p></div>
-    <div class="d-flex gap-2 flex-wrap justify-content-end">
+    <div><h1 class="h3 page-title">{{ ($approvalMode??false)?'Backdated Invoice Approvals':'Backdated Invoices' }}</h1><p class="text-muted mb-0">{{ ($approvalMode??false)?'Review accountant requests and approve them before posting.':'Create and track backdated cash and credit invoice requests.' }}</p></div>
+    @unless($approvalMode??false)<div class="d-flex gap-2 flex-wrap justify-content-end">
         <a href="{{ route('backdated-invoices.create',['type'=>'cash']) }}" class="btn btn-success"><i class="bi bi-cash"></i> Backdated Cash Sale</a>
         <a href="{{ route('backdated-invoices.create',['type'=>'credit']) }}" class="btn btn-primary"><i class="bi bi-credit-card"></i> Backdated Credit Sale</a>
-    </div>
+    </div>@endunless
 </div>
 <div class="row g-3 mb-4">
     <div class="col-lg-7"><div class="alert alert-info mb-0"><strong>Current rule:</strong> the previous {{ $setting->activeDays() }} days are available.@if($setting->temporary_until?->isFuture()) Extended access ends {{ $setting->temporary_until->format('d M Y, h:i A') }}, then automatically returns to 7 days.@else Older dates require CFO approval.@endif</div></div>
     <div class="col-lg-5">
-        @if(auth()->user()->hasPermission('backdated_invoices.update') && $setting->requested_days)
+        @if(($approvalMode??false) && $setting->requested_days)
             <div class="card card-body"><strong>Accountant requested {{ $setting->requested_days }} days</strong><small class="text-muted mb-2">{{ $setting->requester?->name }} · {{ $setting->requested_at?->format('d M Y, h:i A') }}</small><div class="d-flex gap-2"><form method="POST" action="{{ route('backdated-invoices.window') }}">@csrf<input type="hidden" name="days" value="{{ $setting->requested_days }}"><button class="btn btn-success">Approve for 24 Hours</button></form><form method="POST" action="{{ route('backdated-invoices.window.reject') }}">@csrf<button class="btn btn-outline-danger">Reject</button></form></div></div>
-        @elseif(auth()->user()->hasPermission('backdated_invoices.update'))
+        @elseif($approvalMode??false)
             <div class="card card-body text-muted">No extended date-range request is awaiting approval.</div>
         @elseif($setting->requested_days)
             <div class="alert alert-warning mb-0">Your request for {{ $setting->requested_days }} days is awaiting CFO approval.</div>
@@ -32,8 +32,8 @@
         <td>{{ $item->requester?->name }}</td><td>Rs. {{ number_format($item->total_amount,2) }}</td>
         <td><span class="badge {{ $item->status==='approved'?'bg-success':($item->status==='rejected'?'bg-danger':'bg-warning text-dark') }}">{{ ucfirst($item->status) }}</span>@if($item->sale)<div><a href="{{ route('sales.show',$item->sale) }}">{{ $item->sale->document_number }}</a></div>@endif</td>
         <td><div class="d-flex gap-2 flex-wrap">
-            <a href="{{ route('backdated-invoices.show',$item) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i> View</a>
-            @if($item->status==='pending'&&auth()->user()->hasPermission('backdated_invoices.approve'))
+            <a href="{{ route(($approvalMode??false)?'admin.backdated-invoices.show':'backdated-invoices.show',$item) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i> View</a>
+            @if(($approvalMode??false)&&$item->status==='pending'&&auth()->user()->hasPermission('backdated_invoices.approve'))
                 <form method="POST" action="{{ route('backdated-invoices.approve',$item) }}">@csrf<button class="btn btn-sm btn-success" onclick="return confirm('Approve and post this invoice?')">Approve</button></form>
                 <form method="POST" action="{{ route('backdated-invoices.reject',$item) }}">@csrf<button class="btn btn-sm btn-outline-danger">Reject</button></form>
             @else<span class="text-muted align-self-center">{{ $item->reviewer?->name??'Awaiting CFO' }}</span>@endif

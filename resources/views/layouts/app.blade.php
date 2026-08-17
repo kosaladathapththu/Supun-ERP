@@ -39,20 +39,63 @@
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['imports.index','file-earmark-spreadsheet','Bulk Inventory Import'],['serial-numbers.index','upc-scan','Serials & Warranty'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
           ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','person-lines-fill','Receivables — Customer Ledgers'],['payables.index','truck-flatbed','Payables — Supplier Ledgers'],['accounting.accounts','journal-text','General Account Ledgers'],['stock.index','boxes','Stock Ledgers'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting Journals']]],
           ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
-          ['adminMenu','gear','Administration',$adminOpen,[['admin.users.index','people','Staff Users'],['admin.roles.index','person-lock','Roles & Permissions'],['controls.index','shield-check','Control Center']]]
+          ['adminMenu','gear','Administration',$adminOpen,[['admin.backdated-invoices.index','calendar-check','Backdated Invoice Approvals',[],'backdated_invoices.approve'],['admin.users.index','people','Staff Users'],['admin.roles.index','person-lock','Roles & Permissions'],['controls.index','shield-check','Control Center']]]
         ];
         @endphp
         @foreach($groups as [$id,$icon,$label,$open,$items])
-          <button class="nav-link nav-group-toggle {{ $open?'':'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $id }}" aria-expanded="{{ $open?'true':'false' }}"><i class="bi bi-{{ $icon }}"></i> {{ $label }}<i class="bi bi-chevron-down chevron"></i></button>
+          <button class="nav-link nav-group-toggle {{ $open?'active':'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $id }}" aria-expanded="{{ $open?'true':'false' }}"><i class="bi bi-{{ $icon }}"></i> {{ $label }}<i class="bi bi-chevron-down chevron"></i></button>
           <div class="collapse {{ $open?'show':'' }} nav-submenu" id="{{ $id }}" data-bs-parent="#sidebarMenu">
             @foreach($items as $item)
               @php
                 [$route,$itemIcon,$itemLabel]=$item;
                 $params=$item[3]??[];
+                $requiredPermission=$item[4]??null;
+                if($requiredPermission&&!auth()->user()->hasPermission($requiredPermission))continue;
                 $isActive=request()->routeIs($route)&&collect($params)->every(fn($v,$k)=>request($k)===$v);
-                $sectionPatterns=['products.index'=>'products.*','categories.index'=>'categories.*','brands.index'=>'brands.*','units.index'=>'units.*','customers.index'=>'customers.*','suppliers.index'=>'suppliers.*','imports.index'=>'imports.*','purchase-orders.index'=>'purchase-orders.*','grn.index'=>'grn.*','purchase-returns.index'=>'purchase-returns.*','stock.index'=>'stock.*','serial-numbers.index'=>'serial-numbers.*','inventory-operations.index'=>'inventory-operations.*','quotations.index'=>'quotations.*','sales-orders.index'=>'sales-orders.*','delivery-notes.index'=>'delivery-notes.*','sale-returns.index'=>'sale-returns.*','receivables.index'=>'receivables.*','payables.index'=>'payables.*','expenses.index'=>'expenses.*'];
-                if(isset($sectionPatterns[$route]))$isActive=request()->routeIs($sectionPatterns[$route]);
-                if($route==='sales.index'&&!$params){$isActive=$isActive&&!request()->filled('payment_type');}
+                $sectionPatterns=[
+                    'products.index'=>['products.*'],
+                    'categories.index'=>['categories.*'],
+                    'brands.index'=>['brands.*'],
+                    'units.index'=>['units.*'],
+                    'customers.index'=>['customers.*'],
+                    'suppliers.index'=>['suppliers.*'],
+                    'imports.index'=>['imports.*'],
+                    'purchase-orders.index'=>['purchase-orders.*'],
+                    'grn.index'=>['grn.*'],
+                    'purchase-returns.index'=>['purchase-returns.*'],
+                    'stock.index'=>['stock.*'],
+                    'serial-numbers.index'=>['serial-numbers.*'],
+                    'inventory-operations.index'=>['inventory-operations.*'],
+                    'backdated-invoices.index'=>['backdated-invoices.*'],
+                    'quotations.index'=>['quotations.*'],
+                    'sales-orders.index'=>['sales-orders.*'],
+                    'delivery-notes.index'=>['delivery-notes.*'],
+                    'sale-returns.index'=>['sale-returns.*'],
+                    'cashier-sessions.index'=>['cashier-sessions.*'],
+                    'receivables.index'=>['receivables.*'],
+                    'payables.index'=>['payables.*'],
+                    'expenses.index'=>['expenses.*'],
+                    'accounting.accounts'=>['accounting.accounts','accounting.ledger','accounting.trial-balance'],
+                    'accounting.journals'=>['accounting.journals','accounting.show'],
+                    'reports.index'=>['reports.index'],
+                    'reports.profitability'=>['reports.profitability'],
+                    'reports.inventory'=>['reports.inventory'],
+                    'statements.index'=>['statements.index'],
+                    'statements.profit-loss'=>['statements.profit-loss'],
+                    'statements.balance-sheet'=>['statements.balance-sheet'],
+                    'statements.cash-flow'=>['statements.cash-flow'],
+                    'statements.reconciliation'=>['statements.reconciliation'],
+                    'admin.users.index'=>['admin.users.*'],
+                    'admin.roles.index'=>['admin.roles.*'],
+                    'admin.backdated-invoices.index'=>['admin.backdated-invoices.*'],
+                    'controls.index'=>['controls.*'],
+                ];
+                if(isset($sectionPatterns[$route]))$isActive=request()->routeIs(...$sectionPatterns[$route]);
+                if($route==='sales.index'){
+                    $isSalesHistory=request()->routeIs('sales.index');
+                    if($params)$isActive=$isSalesHistory&&collect($params)->every(fn($v,$k)=>request($k)===$v);
+                    else $isActive=$isSalesHistory&&!request()->filled('payment_type')||request()->routeIs('sales.show','sales-exchanges.*');
+                }
               @endphp
               <a class="nav-link {{ $isActive?'active':'' }}" href="{{ route($route,$params) }}"><i class="bi bi-{{ $itemIcon }}"></i> {{ $itemLabel }}</a>
             @endforeach

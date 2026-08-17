@@ -68,6 +68,8 @@ Route::middleware('auth')->group(function () {
     Route::get('sales/cash/create',[SaleController::class,'cashCreate'])->middleware('permission:sales.view')->name('sales.cash.create');
     Route::get('sales/credit/create',[SaleController::class,'creditCreate'])->middleware('permission:sales.view')->name('sales.credit.create');
     Route::get('backdated-invoices',[BackdatedInvoiceController::class,'index'])->middleware('permission:backdated_invoices.view')->name('backdated-invoices.index');
+    Route::get('admin/backdated-invoice-approvals',[BackdatedInvoiceController::class,'index'])->middleware('permission:backdated_invoices.approve')->name('admin.backdated-invoices.index');
+    Route::get('admin/backdated-invoice-approvals/{backdatedInvoice}',[BackdatedInvoiceController::class,'show'])->middleware('permission:backdated_invoices.approve')->name('admin.backdated-invoices.show');
     Route::get('backdated-invoices/create',[BackdatedInvoiceController::class,'create'])->middleware('permission:backdated_invoices.create')->name('backdated-invoices.create');
     Route::get('backdated-invoices/{backdatedInvoice}',[BackdatedInvoiceController::class,'show'])->middleware('permission:backdated_invoices.view')->name('backdated-invoices.show');
     Route::post('backdated-invoices',[BackdatedInvoiceController::class,'store'])->middleware('permission:backdated_invoices.create')->name('backdated-invoices.store');
