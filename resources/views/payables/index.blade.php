@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Payables')
 @section('content')
-<div class="d-flex justify-content-between mb-4"><div><h1 class="h3 page-title">Supplier Payables</h1><p class="text-muted">Open a row action to pay, inspect its GRN, or review the supplier ledger.</p></div><div><a href="{{ route('payables.aging') }}" class="btn btn-outline-primary">Aging</a> <a href="{{ route('payables.create') }}" class="btn btn-primary">New Payment</a></div></div>
+<div class="d-flex justify-content-between mb-4"><div><h1 class="h3 page-title">Supplier Payables</h1><p class="text-muted">Open a row action to pay, inspect its GRN, or review the supplier ledger.</p></div><div class="d-flex gap-2 flex-wrap justify-content-end"><a href="{{ route('payables.print') }}" class="btn btn-outline-dark"><i class="bi bi-printer me-1"></i> Print Report</a><a href="{{ route('payables.aging') }}" class="btn btn-outline-primary">Aging</a><a href="{{ route('payables.create') }}" class="btn btn-primary">New Payment</a></div></div>
 @php
     $companyId=auth()->user()->company_id;
     $payableTotals=\App\Models\SupplierInvoice::where('company_id',$companyId)->where('status','posted')->selectRaw('COALESCE(SUM(total_amount),0) billed, COALESCE(SUM(balance_amount),0) outstanding')->first();
