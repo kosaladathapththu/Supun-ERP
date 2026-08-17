@@ -9,7 +9,20 @@ class CustomerReceiptService
     {
         return DB::transaction(function()use($data,$user){
             $amount=(string)$data['amount'];$allocated='0';$lines=[];
-            foreach(($data['allocations']??[]) as $saleId=>$value){
+            $allocations=$data['allocations']??[];
+            $hasManualAllocation=collect($allocations)->contains(fn($value)=>$value&&bccomp((string)$value,'0',2)>0);
+            if(!$hasManualAllocation&&!($data['keep_unapplied']??false)){
+                $remaining=$amount;
+                $openSales=Sale::where('company_id',$user->company_id)->where('customer_id',$data['customer_id'])
+                    ->where('status','posted')->where('payment_type','credit')->where('balance_amount','>',0)
+                    ->orderByRaw('due_date IS NULL')->orderBy('due_date')->orderBy('sale_date')->lockForUpdate()->get();
+                foreach($openSales as $sale){
+                    if(bccomp($remaining,'0',2)<=0)break;
+                    $value=bccomp($remaining,(string)$sale->balance_amount,2)>0?(string)$sale->balance_amount:$remaining;
+                    $allocations[$sale->id]=$value;$remaining=bcsub($remaining,$value,2);
+                }
+            }
+            foreach($allocations as $saleId=>$value){
                 if(!$value||bccomp((string)$value,'0',2)<=0)continue;
                 $sale=Sale::where('company_id',$user->company_id)->where('customer_id',$data['customer_id'])->where('status','posted')->lockForUpdate()->findOrFail($saleId);
                 if(bccomp((string)$value,(string)$sale->balance_amount,2)>0)throw ValidationException::withMessages(['allocations'=>"Allocation exceeds the balance of {$sale->document_number}."]);
