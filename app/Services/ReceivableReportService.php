@@ -12,8 +12,8 @@ class ReceivableReportService
         $customers = Customer::where('company_id', $companyId)
             ->registered()->where('is_active', 1)
             ->when($customerId, fn ($query) => $query->whereKey($customerId))
-            ->withSum(['sales as total_invoiced' => fn ($query) => $query->where('status', 'posted')], 'grand_total')
-            ->withSum(['sales as outstanding_balance' => fn ($query) => $query->where('status', 'posted')], 'balance_amount')
+            ->withSum(['sales as total_invoiced' => fn ($query) => $query->where('status', 'posted')->where('payment_type', 'credit')], 'grand_total')
+            ->withSum(['sales as outstanding_balance' => fn ($query) => $query->where('status', 'posted')->where('payment_type', 'credit')], 'balance_amount')
             ->withSum(['receipts as total_received' => fn ($query) => $query->where('status', 'posted')], 'amount')
             ->orderBy('name')->get();
 

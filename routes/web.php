@@ -72,6 +72,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:sales.create')->group(function(){Route::get('sales/{sale}/exchange',[SalesExchangeController::class,'create'])->name('sales-exchanges.create');Route::post('sales/{sale}/exchange',[SalesExchangeController::class,'store'])->name('sales-exchanges.store');Route::get('sales-exchanges/{exchange}',[SalesExchangeController::class,'show'])->name('sales-exchanges.show');Route::post('sales/{sale}/void',[SalesExchangeController::class,'void'])->name('sales.void');});
     Route::middleware('permission:sales.view')->group(function(){
         Route::get('receivables/aging',[ReceivableController::class,'aging'])->name('receivables.aging');
+        Route::get('receivables/export/excel',[ReceivableController::class,'exportExcel'])->name('receivables.export.excel');
+        Route::get('receivables/export/pdf',[ReceivableController::class,'exportPdf'])->name('receivables.export.pdf');
         Route::get('receivables/customers/{customer}/ledger',[ReceivableController::class,'ledger'])->name('receivables.ledger');
         Route::resource('receivables',ReceivableController::class)->only(['index','create','store','show']);
     });
