@@ -13,7 +13,7 @@
 <div class="card"><div class="card-body p-3 border-bottom">
 <div class="nav nav-pills mb-3"><a class="nav-link {{ !request('payment_type')?'active':'' }}" href="{{ route('sales.index') }}">All Sales</a><a class="nav-link {{ request('payment_type')==='cash'?'active':'' }}" href="{{ route('sales.index',['payment_type'=>'cash']) }}">Cash Sales</a><a class="nav-link {{ request('payment_type')==='credit'?'active':'' }}" href="{{ route('sales.index',['payment_type'=>'credit']) }}">Credit Sales</a></div>
 <form id="sales-filter-form">
-    <div class="border rounded-3 overflow-hidden">
+    <div class="section-surface border rounded-3 overflow-hidden">
         <div class="d-flex align-items-center justify-content-between px-3 py-2 bg-light border-bottom">
             <div><strong><i class="bi bi-funnel me-2 text-primary"></i>Filter sales</strong><div class="small text-muted">Narrow the invoice list using any combination below.</div></div>
             <a href="{{ route('sales.index') }}" class="btn btn-sm btn-light border"><i class="bi bi-x-circle me-1"></i>Reset all</a>
