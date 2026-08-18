@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') · CMG - Camy Global Marcket</title>
+    <title>@yield('title', 'Dashboard') · CGM - Camy Global Marcket</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -34,7 +34,7 @@
 </head>
 <body>
 <aside class="sidebar">
-    <div class="brand d-flex align-items-center gap-3"><div class="brand-mark"><i class="bi bi-cpu"></i></div><div><div class="fw-bold">CMG</div><small class="text-white-50">Camy Global Marcket</small></div></div>
+    <div class="brand d-flex align-items-center gap-3"><div class="brand-mark"><i class="bi bi-cpu"></i></div><div><div class="fw-bold">CGM</div><small class="text-white-50">Camy Global Marcket</small></div></div>
     <nav class="pb-4" id="sidebarMenu">
         @php
             $masterOpen=request()->routeIs('products.*','categories.*','brands.*','units.*','customers.*','suppliers.*');

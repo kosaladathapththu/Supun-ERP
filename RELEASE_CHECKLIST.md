@@ -1,4 +1,4 @@
-# CMG - Camy Global Marcket Release Checklist
+# CGM - Camy Global Marcket Release Checklist
 
 ## Automated gates
 

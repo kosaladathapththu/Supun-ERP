@@ -1,4 +1,4 @@
-# CMG - Camy Global Marcket
+# CGM - Camy Global Marcket
 
 Local electronics retail/wholesale ERP using Laravel, MariaDB, Blade and Bootstrap. Implemented modules include master data/imports, purchase orders and GRN, weighted-average inventory, sales/POS, customer receipts, allocations, advances, customer ledgers and receivables aging.
 
@@ -15,7 +15,7 @@ Local electronics retail/wholesale ERP using Laravel, MariaDB, Blade and Bootstr
 
 1. Start Apache and MySQL from the XAMPP control panel.
 2. Create a UTF-8 database: `CREATE DATABASE supun_erp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`.
-3. Copy `.env.example` to `.env` and set `APP_NAME="CMG - Camy Global Marcket"`, `APP_URL=http://localhost/Supun-ERP/public`, database name `supun_erp`, user and password.
+3. Copy `.env.example` to `.env` and set `APP_NAME="CGM - Camy Global Marcket"`, `APP_URL=http://localhost/Supun-ERP/public`, database name `supun_erp`, user and password.
 4. Run Composer using XAMPP PHP (commands below), generate the key, then migrate/seed.
 5. Either place/copy the project under XAMPP `htdocs`, create a directory junction, or configure an Apache virtual host whose `DocumentRoot` is this project's `public` folder. Enable `mod_rewrite` and allow overrides for the public directory.
 

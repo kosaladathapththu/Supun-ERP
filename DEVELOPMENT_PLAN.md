@@ -1,4 +1,4 @@
-# CMG - Camy Global Marcket Development Plan
+# CGM - Camy Global Marcket Development Plan
 
 ## Delivery rules
 
