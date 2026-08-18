@@ -14,6 +14,13 @@ class SaleController extends Controller
 {
     public function index(Request $request)
     {
+        $request->validate([
+            'date_mode' => 'nullable|in:single,range',
+            'date' => 'nullable|date',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+
         $companyId = $request->user()->company_id;
         $query = Sale::with('customer')->where('company_id', $companyId);
         if ($search = trim((string) $request->query('search'))) {
@@ -28,15 +35,28 @@ class SaleController extends Controller
         if ($request->filled('status')) {
             $query->where('payment_status', $request->status);
         }
-        if ($request->filled('from')) {
-            $query->whereDate('sale_date', '>=', $request->from);
-        }
-        if ($request->filled('to')) {
-            $query->whereDate('sale_date', '<=', $request->to);
-        }
-        $summary = Sale::where('company_id', $companyId)->where('status', 'posted')->selectRaw('payment_type, COUNT(*) invoice_count, SUM(grand_total) total, SUM(balance_amount) balance')->groupBy('payment_type')->get()->keyBy('payment_type');
+        $dateMode = $request->query('date_mode', $request->filled('date') ? 'single' : 'range');
+        $singleDate = $request->query('date');
+        $from = $dateMode === 'single' ? $singleDate : $request->query('from');
+        $to = $dateMode === 'single' ? $singleDate : $request->query('to');
 
-        return view('sales.index', ['sales' => $query->latest('sale_date')->paginate(20)->withQueryString(), 'summary' => $summary]);
+        if ($from) {
+            $query->whereDate('sale_date', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('sale_date', '<=', $to);
+        }
+
+        $summaryQuery = Sale::where('company_id', $companyId)->where('status', 'posted');
+        if ($from) {
+            $summaryQuery->whereDate('sale_date', '>=', $from);
+        }
+        if ($to) {
+            $summaryQuery->whereDate('sale_date', '<=', $to);
+        }
+        $summary = $summaryQuery->selectRaw('payment_type, COUNT(*) invoice_count, SUM(grand_total) total, SUM(balance_amount) balance')->groupBy('payment_type')->get()->keyBy('payment_type');
+
+        return view('sales.index', compact('summary', 'dateMode', 'singleDate', 'from', 'to') + ['sales' => $query->latest('sale_date')->paginate(20)->withQueryString()]);
     }
 
     public function create(Request $request)
