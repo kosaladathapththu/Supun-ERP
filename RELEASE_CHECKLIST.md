@@ -1,4 +1,4 @@
-# Supun ERP Release Checklist
+# CMG - Camy Global Marcket Release Checklist
 
 ## Automated gates
 

@@ -1,4 +1,4 @@
-# Supun Group ERP Development Plan
+# CMG - Camy Global Marcket Development Plan
 
 ## Delivery rules
 

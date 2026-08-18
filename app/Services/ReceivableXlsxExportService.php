@@ -32,7 +32,7 @@ class ReceivableXlsxExportService
     {
         $company = DB::table('companies')->where('id', $companyId)->first();
         $book = new Spreadsheet();
-        $book->getProperties()->setCreator('Supun Group ERP')->setTitle('Customer Receivables Report')->setSubject('Customer balances and posted receipts');
+        $book->getProperties()->setCreator('CMG - Camy Global Marcket')->setTitle('Customer Receivables Report')->setSubject('Customer balances and posted receipts');
 
         $summary = $book->getActiveSheet();
         $summary->setTitle('Summary');
@@ -56,8 +56,8 @@ class ReceivableXlsxExportService
     private function buildSummary($sheet, array $report, object $company, string $generatedBy): void
     {
         $scope = $report['selectedCustomer'] ? 'Customer: '.$report['selectedCustomer']->name.' ('.$report['selectedCustomer']->code.')' : 'All registered customers';
-        $sheet->mergeCells('A1:F1')->setCellValue('A1', 'SUPUN GROUP ERP');
-        $sheet->mergeCells('A2:F2')->setCellValue('A2', ($company->name ?? 'Supun Group').' - Customer Receivables Report');
+        $sheet->mergeCells('A1:F1')->setCellValue('A1', 'CMG - CAMY GLOBAL MARCKET');
+        $sheet->mergeCells('A2:F2')->setCellValue('A2', ($company->name ?? 'Camy Global Marcket').' - Customer Receivables Report');
         $sheet->mergeCells('A3:F3')->setCellValue('A3', $scope);
         foreach (['A5:B5' => 'TOTAL CREDIT SALES', 'C5:D5' => 'TOTAL PAID BY CUSTOMERS', 'E5:F5' => 'CURRENT RECEIVABLE'] as $range => $label) {
             $sheet->mergeCells($range);
@@ -176,7 +176,7 @@ class ReceivableXlsxExportService
         $sheet->getSheetView()->setZoomScale(90);
         $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4)->setOrientation($orientation)->setFitToWidth(1)->setFitToHeight(0)->setPrintArea($printArea);
         $sheet->getPageMargins()->setTop(.45)->setBottom(.45)->setLeft(.3)->setRight(.3);
-        $sheet->getHeaderFooter()->setOddFooter('&LSupun Group ERP&CConfidential business report&RPage &P of &N');
+        $sheet->getHeaderFooter()->setOddFooter('&LCMG - Camy Global Marcket&CConfidential business report&RPage &P of &N');
     }
 
     private function titleStyle(int $size): array
