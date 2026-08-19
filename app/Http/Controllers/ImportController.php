@@ -163,11 +163,27 @@ class ImportController extends Controller
             'unit:id,code,name',
             'prices' => fn ($query) => $query->where('is_active', true),
         ])->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get();
+        $suppliers = Supplier::where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'phone']);
+        $productLookup = $products->mapWithKeys(fn ($product) => [$product->id => [
+            'item_code' => $product->item_code,
+            'product_name' => $product->name,
+            'barcode' => $product->barcode,
+            'brand' => $product->brand?->name,
+            'unit' => $product->unit?->code,
+            'category' => $product->category?->name,
+            'cost_price' => $product->average_cost,
+            'retail_price' => $product->prices->firstWhere('price_type', 'retail')?->amount,
+            'wholesale_price' => $product->prices->firstWhere('price_type', 'wholesale')?->amount,
+            'minimum_stock' => $product->minimum_stock,
+            'reorder_level' => $product->reorder_level,
+            'warranty_months' => $product->warranty_months,
+            'serial_tracking' => $product->serial_tracking ? 'yes' : 'no',
+        ]]);
 
-        return view('imports.row', compact('batch', 'row', 'products') + [
+        return view('imports.row', compact('batch', 'row', 'products', 'suppliers', 'productLookup') + [
             'headers' => self::HEADERS,
             'editing' => true,
-            'suppliers' => Supplier::where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'phone']),
+            'supplierLookup' => $suppliers->keyBy('id'),
             'brands' => DB::table('brands')->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->pluck('name'),
             'units' => DB::table('units')->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['code', 'name']),
             'categories' => DB::table('product_categories')->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->pluck('name'),

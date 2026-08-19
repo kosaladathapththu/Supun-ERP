@@ -58,22 +58,8 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const suppliers = @json($suppliers->keyBy('id'));
-    const products = @json($products->mapWithKeys(fn($product) => [$product->id => [
-        'item_code' => $product->item_code,
-        'product_name' => $product->name,
-        'barcode' => $product->barcode,
-        'brand' => $product->brand?->name,
-        'unit' => $product->unit?->code,
-        'category' => $product->category?->name,
-        'cost_price' => $product->average_cost,
-        'retail_price' => $product->prices->firstWhere('price_type','retail')?->amount,
-        'wholesale_price' => $product->prices->firstWhere('price_type','wholesale')?->amount,
-        'minimum_stock' => $product->minimum_stock,
-        'reorder_level' => $product->reorder_level,
-        'warranty_months' => $product->warranty_months,
-        'serial_tracking' => $product->serial_tracking ? 'yes' : 'no',
-    ]])));
+    const suppliers = @json($supplierLookup);
+    const products = @json($productLookup);
     const fill = values => Object.entries(values || {}).forEach(([field,value]) => {
         const input = document.getElementById(`field-${field}`);
         if (input && value !== null && value !== undefined) input.value = value;
