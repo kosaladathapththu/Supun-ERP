@@ -13,9 +13,36 @@ class SaleReturnController extends Controller
 {
     public function index(Request $r)
     {
-        $company = $r->user()->company_id;
+        $r->validate([
+            'search' => 'nullable|string|max:100',
+            'payment_type' => 'nullable|in:cash,credit',
+            'channel' => 'nullable|in:retail,wholesale',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
 
-        return view('sale-returns.index', ['returns' => SaleReturn::with(['sale', 'customer'])->where('company_id', $company)->latest('return_date')->paginate(20), 'sales' => Sale::with('customer')->where('company_id', $company)->where('status', 'posted')->latest('sale_date')->limit(25)->get()]);
+        $company = $r->user()->company_id;
+        $sales = Sale::with('customer')
+            ->where('company_id', $company)
+            ->where('status', 'posted')
+            ->when($r->filled('search'), function ($query) use ($r) {
+                $search = trim((string) $r->query('search'));
+                $query->where(fn ($sale) => $sale
+                    ->where('document_number', 'like', "%{$search}%")
+                    ->orWhereHas('customer', fn ($customer) => $customer->where('name', 'like', "%{$search}%")));
+            })
+            ->when($r->filled('payment_type'), fn ($query) => $query->where('payment_type', $r->query('payment_type')))
+            ->when($r->filled('channel'), fn ($query) => $query->where('channel', $r->query('channel')))
+            ->when($r->filled('from'), fn ($query) => $query->whereDate('sale_date', '>=', $r->query('from')))
+            ->when($r->filled('to'), fn ($query) => $query->whereDate('sale_date', '<=', $r->query('to')))
+            ->latest('sale_date')
+            ->limit(100)
+            ->get();
+
+        return view('sale-returns.index', [
+            'returns' => SaleReturn::with(['sale', 'customer'])->where('company_id', $company)->latest('return_date')->paginate(20)->withQueryString(),
+            'sales' => $sales,
+        ]);
     }
 
     public function create(Request $r, $sale)

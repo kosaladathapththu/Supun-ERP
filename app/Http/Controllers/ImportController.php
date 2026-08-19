@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\PurchaseOrder;
 use App\Models\SupplierInvoice;
+use App\Models\Supplier;
 use App\Services\DocumentNumberService;
 use App\Services\InventoryReceivingService;
 use App\Services\JournalPostingService;
@@ -155,7 +156,22 @@ class ImportController extends Controller
         $this->ownedRow($request, $batch, $row);
         abort_unless($batch->status === 'validated', 422);
 
-        return view('imports.row', compact('batch', 'row') + ['headers' => self::HEADERS, 'editing' => true]);
+        $companyId = $request->user()->company_id;
+        $products = Product::with([
+            'category:id,name',
+            'brand:id,name',
+            'unit:id,code,name',
+            'prices' => fn ($query) => $query->where('is_active', true),
+        ])->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get();
+
+        return view('imports.row', compact('batch', 'row', 'products') + [
+            'headers' => self::HEADERS,
+            'editing' => true,
+            'suppliers' => Supplier::where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['id', 'code', 'name', 'phone']),
+            'brands' => DB::table('brands')->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->pluck('name'),
+            'units' => DB::table('units')->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['code', 'name']),
+            'categories' => DB::table('product_categories')->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->pluck('name'),
+        ]);
     }
 
     public function updateRow(Request $request, ImportBatch $batch, ImportRow $row)
