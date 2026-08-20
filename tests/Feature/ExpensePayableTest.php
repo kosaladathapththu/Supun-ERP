@@ -37,4 +37,18 @@ class ExpensePayableTest extends TestCase
         $this->assertSame('paid', $expense->fresh()->payment_status);
         $this->assertDatabaseCount('expense_payments', 2);
     }
+
+    public function test_a_recurring_bill_can_link_to_the_previous_bill(): void
+    {
+        $account = Account::where('code', '6000')->firstOrFail();
+        $previous = Expense::create(['company_id' => auth()->user()->company_id, 'account_id' => $account->id, 'created_by' => auth()->id(), 'document_number' => 'EXP-OLD', 'expense_date' => '2026-07-20', 'billing_period' => 'July 2026', 'payee' => 'Electricity Board', 'amount' => 500, 'paid_amount' => 200, 'balance_amount' => 300, 'payment_status' => 'partially_paid', 'payment_method' => 'cash', 'description' => 'Electricity']);
+
+        $this->post(route('expenses.store'), ['expense_date' => '2026-08-20', 'billing_period' => 'August 2026', 'previous_expense_id' => $previous->id, 'account_id' => $account->id, 'payee' => 'Electricity Board', 'amount' => 700, 'paid_amount' => 0, 'description' => 'Electricity'])
+            ->assertSessionHasNoErrors();
+
+        $current = Expense::where('billing_period', 'August 2026')->firstOrFail();
+        $this->assertSame($previous->id, $current->previous_expense_id);
+        $this->get(route('expenses.show', $current))->assertOk()->assertSee('EXP-OLD')->assertSee('Previous:');
+        $this->get(route('expenses.show', $previous))->assertOk()->assertSee($current->document_number)->assertSee('Next:');
+    }
 }
