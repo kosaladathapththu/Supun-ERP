@@ -19,4 +19,14 @@ class Expense extends Model
     {
         return $this->hasMany(ExpensePayment::class);
     }
+
+    public function previousBill()
+    {
+        return $this->belongsTo(Expense::class, 'previous_expense_id');
+    }
+
+    public function nextBills()
+    {
+        return $this->hasMany(Expense::class, 'previous_expense_id');
+    }
 }

@@ -25,12 +25,15 @@ class ExpenseController extends Controller
 
     public function create(Request $request)
     {
-        return view('expenses.create', ['accounts' => $this->accounts($request->user()->company_id)]);
+        $company = $request->user()->company_id;
+        $previous = $request->integer('previous') ? Expense::with('account')->where('company_id', $company)->findOrFail($request->integer('previous')) : null;
+        $recentBills = Expense::with('account')->where('company_id', $company)->latest('expense_date')->limit(50)->get();
+        return view('expenses.create', ['accounts' => $this->accounts($company), 'previous' => $previous, 'recentBills' => $recentBills]);
     }
 
     public function exportExcel(Request $request, ReportXlsxService $excel)
     {
-        $expenses = Expense::with('account')->where('company_id', $request->user()->company_id)->orderBy('expense_date')->get();
+        $expenses = Expense::with(['account', 'previousBill'])->where('company_id', $request->user()->company_id)->orderBy('expense_date')->get();
         $rows = $expenses->map(fn ($x) => [$x->document_number, $x->expense_date->format('Y-m-d'), $x->due_date?->format('Y-m-d'), $x->payee, $x->account->code.' — '.$x->account->name, $x->description, (float) $x->amount, (float) $x->paid_amount, (float) $x->balance_amount, str($x->payment_status)->headline()->toString()]);
         $path = $excel->create('Expense Bills Report', 'All posted expense bills as at '.now()->toDateString(), ['Bill', 'Bill Date', 'Due Date', 'Payee', 'Expense Account', 'Description', 'Bill Amount', 'Paid', 'Not Paid Yet', 'Status'], $rows, ['G', 'H', 'I'], ['Total billed' => (float) $expenses->sum('amount'), 'Total paid' => (float) $expenses->sum('paid_amount'), 'Total payable' => (float) $expenses->sum('balance_amount')]);
         return response()->download($path, 'expense-bills-'.now()->format('Y-m-d').'.xlsx')->deleteFileAfterSend(true);
@@ -40,7 +43,8 @@ class ExpenseController extends Controller
     {
         $company = $request->user()->company_id;
         $data = $request->validate([
-            'expense_date' => ['required', 'date'], 'due_date' => ['nullable', 'date', 'after_or_equal:expense_date'],
+            'expense_date' => ['required', 'date'], 'due_date' => ['nullable', 'date', 'after_or_equal:expense_date'], 'billing_period' => ['nullable', 'string', 'max:50'],
+            'previous_expense_id' => ['nullable', Rule::exists('expenses', 'id')->where(fn ($q) => $q->where('company_id', $company))],
             'account_id' => ['required', Rule::exists('accounts', 'id')->where(fn ($q) => $q->where('company_id', $company)->where('is_active', 1))],
             'payee' => ['required', 'string', 'max:150'], 'amount' => ['required', 'numeric', 'gt:0'],
             'paid_amount' => ['required', 'numeric', 'min:0', 'lte:amount'],
@@ -71,7 +75,7 @@ class ExpenseController extends Controller
 
     public function show(Request $request, $expense)
     {
-        $expense = Expense::with(['account', 'payments'])->where('company_id', $request->user()->company_id)->findOrFail($expense);
+        $expense = Expense::with(['account', 'payments', 'previousBill', 'nextBills'])->where('company_id', $request->user()->company_id)->findOrFail($expense);
 
         return view('expenses.show', compact('expense'));
     }
