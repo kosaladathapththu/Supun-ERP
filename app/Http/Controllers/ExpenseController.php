@@ -42,7 +42,7 @@ class ExpenseController extends Controller
             $paid = (string) $data['paid_amount'];
             $balance = bcsub((string) $data['amount'], $paid, 2);
             $status = bccomp($balance, '0', 2) === 0 ? 'paid' : (bccomp($paid, '0', 2) > 0 ? 'partially_paid' : 'unpaid');
-            $expense = Expense::create($data + ['company_id' => $company, 'created_by' => $request->user()->id, 'document_number' => app(DocumentNumberService::class)->next($company, 'expense', 'EXP'), 'paid_amount' => $paid, 'balance_amount' => $balance, 'payment_status' => $status, 'payment_method' => $data['payment_method'] ?? 'payable']);
+            $expense = Expense::create(array_merge($data, ['company_id' => $company, 'created_by' => $request->user()->id, 'document_number' => app(DocumentNumberService::class)->next($company, 'expense', 'EXP'), 'paid_amount' => $paid, 'balance_amount' => $balance, 'payment_status' => $status, 'payment_method' => $data['payment_method'] ?? 'payable']));
             $account = Account::findOrFail($data['account_id']);
             $lines = [['account_code' => $account->code, 'debit' => $data['amount']]];
             if (bccomp($paid, '0', 2) > 0) {
