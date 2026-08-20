@@ -3,16 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Models\DebitNote;
+use App\Models\Expense;
 use App\Models\Supplier;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use App\Services\PayableXlsxExportService;
+use App\Services\ReportXlsxService;
 use App\Services\SupplierPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class PayableController extends Controller
 {
+    public function allPayables(Request $request)
+    {
+        $company = $request->user()->company_id;
+        $suppliers = $this->supplierBalances($company)->filter(fn ($supplier) => (float) $supplier->current_payable > 0)->values();
+        $expenses = Expense::with('account')->where('company_id', $company)->where('status', 'posted')->where('balance_amount', '>', 0)->orderByRaw('due_date IS NULL')->orderBy('due_date')->get();
+
+        return view('payables.all', ['suppliers' => $suppliers, 'expenses' => $expenses, 'supplierPayable' => (float) $suppliers->sum('current_payable'), 'expensePayable' => (float) $expenses->sum('balance_amount')]);
+    }
+
+    public function exportAllPayables(Request $request, ReportXlsxService $excel)
+    {
+        $company = $request->user()->company_id;
+        $suppliers = $this->supplierBalances($company)->filter(fn ($supplier) => (float) $supplier->current_payable > 0);
+        $expenses = Expense::where('company_id', $company)->where('status', 'posted')->where('balance_amount', '>', 0)->get();
+        $rows = $suppliers->map(fn ($supplier) => ['Supplier', $supplier->name, $supplier->code, null, 'Outstanding', (float) $supplier->total_invoiced, (float) $supplier->total_paid, (float) $supplier->current_payable])
+            ->concat($expenses->map(fn ($expense) => ['Expense', $expense->payee, $expense->document_number, $expense->due_date?->format('Y-m-d'), str($expense->payment_status)->headline()->toString(), (float) $expense->amount, (float) $expense->paid_amount, (float) $expense->balance_amount]));
+        $supplierPayable = (float) $suppliers->sum('current_payable');
+        $expensePayable = (float) $expenses->sum('balance_amount');
+        $path = $excel->create('All Payables', 'Supplier and operating-expense obligations as at '.now()->toDateString(), ['Type', 'Payee / Supplier', 'Document', 'Due Date', 'Status', 'Billed', 'Paid', 'Payable'], $rows, ['F', 'G', 'H'], ['Supplier payables' => $supplierPayable, 'Expense payables' => $expensePayable, 'Total payables' => $supplierPayable + $expensePayable]);
+
+        return response()->download($path, 'all-payables-'.now()->format('Y-m-d').'.xlsx')->deleteFileAfterSend(true);
+    }
+
     public function index(Request $request)
     {
         $companyId = $request->user()->company_id;
@@ -151,5 +176,19 @@ class PayableController extends Controller
         $items = SupplierInvoice::with('supplier')->where('company_id', $request->user()->company_id)->where('balance_amount', '>', 0)->get();
 
         return view('payables.aging', compact('items'));
+    }
+
+    private function supplierBalances(int $companyId)
+    {
+        $suppliers = Supplier::where('company_id', $companyId)->where('is_active', 1)->addSelect([
+            'total_invoiced' => SupplierInvoice::selectRaw('COALESCE(SUM(total_amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+            'total_paid' => SupplierPayment::selectRaw('COALESCE(SUM(amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
+        ])->orderBy('name')->get();
+        $credits = DebitNote::where('company_id', $companyId)->where('status', '!=', 'voided')->selectRaw('supplier_id, SUM(amount) total')->groupBy('supplier_id')->pluck('total', 'supplier_id');
+        return $suppliers->each(function ($supplier) use ($credits) {
+            $billed = (float) $supplier->opening_balance + (float) $supplier->total_invoiced;
+            $supplier->total_invoiced = $billed;
+            $supplier->current_payable = max(0, $billed - (float) $supplier->total_paid - (float) ($credits[$supplier->id] ?? 0));
+        });
     }
 }

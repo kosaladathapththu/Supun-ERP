@@ -190,6 +190,10 @@ Route::middleware('auth')->group(function () {
     Route::get('payables/aging', [PayableController::class, 'aging'])->name('payables.aging');
     Route::get('payables/suppliers/{supplier}/ledger', [PayableController::class, 'ledger'])->name('payables.ledger');
     });
+    Route::middleware(['permission:purchases.view', 'permission:accounting.view'])->group(function () {
+    Route::get('all-payables', [PayableController::class, 'allPayables'])->name('payables.all');
+    Route::get('all-payables/export/excel', [PayableController::class, 'exportAllPayables'])->name('payables.all.export');
+    });
     Route::get('accounting/accounts', [AccountingController::class, 'accounts'])->middleware('permission:accounting.view')->name('accounting.accounts');
     Route::get('expenses/{expense}/payment', [ExpenseController::class, 'payment'])->middleware('permission:accounting.view')->name('expenses.payment');
     Route::get('expenses/export/excel', [ExpenseController::class, 'exportExcel'])->middleware('permission:accounting.view')->name('expenses.export');
