@@ -42,8 +42,8 @@
             $salesOpen=(request()->routeIs('sales.*','backdated-invoices.*','quotations.*','sales-orders.*','delivery-notes.*','sale-returns.*','sales-exchanges.*')&&!$posOpen);
             $purchaseOpen=request()->routeIs('purchases.direct.*','purchase-orders.*','grn.*','purchase-returns.*');
             $inventoryOpen=request()->routeIs('stock.*','inventory-operations.*','serial-numbers.*','imports.*');
-            $financeOpen=request()->routeIs('cashier-sessions.*','receivables.*','payables.*','expenses.*','accounting.*');
-            $reportsOpen=request()->routeIs('statements.*','reports.*');
+            $financeOpen=request()->routeIs('cashier-sessions.*','receivables.*','payables.*','expenses.*','accounting.accounts','accounting.ledger','accounting.journals','accounting.show');
+            $reportsOpen=request()->routeIs('statements.*','reports.*','accounting.trial-balance','accounting.trial-balance.export');
             $adminOpen=request()->routeIs('admin.*','controls.*');
         @endphp
         <div class="nav-section">MAIN MENU</div>
@@ -56,7 +56,7 @@
           ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchases.direct.create','receipt-cutoff','Bill to Invoice'],['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['imports.index','file-earmark-spreadsheet','Bulk Inventory Import'],['serial-numbers.index','upc-scan','Serials & Warranty'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
           ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','person-lines-fill','Receivables — Customer Ledgers'],['payables.index','truck-flatbed','Payables — Supplier Ledgers'],['accounting.accounts','journal-text','General Account Ledgers'],['stock.index','boxes','Stock Ledgers'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting Journals']]],
-          ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
+          ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['accounting.trial-balance','list-columns-reverse','Trial Balance'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
           ['adminMenu','gear','Administration',$adminOpen,[['admin.backdated-invoices.index','calendar-check','Backdated Invoice Approvals',[],'backdated_invoices.approve'],['admin.users.index','people','Staff Users'],['admin.roles.index','person-lock','Roles & Permissions'],['controls.index','shield-check','Control Center']]]
         ];
         @endphp
@@ -94,7 +94,8 @@
                     'receivables.index'=>['receivables.*'],
                     'payables.index'=>['payables.*'],
                     'expenses.index'=>['expenses.*'],
-                    'accounting.accounts'=>['accounting.accounts','accounting.ledger','accounting.trial-balance'],
+                    'accounting.accounts'=>['accounting.accounts','accounting.ledger'],
+                    'accounting.trial-balance'=>['accounting.trial-balance','accounting.trial-balance.export'],
                     'accounting.journals'=>['accounting.journals','accounting.show'],
                     'reports.index'=>['reports.index'],
                     'reports.profitability'=>['reports.profitability'],
