@@ -55,7 +55,7 @@
           ['salesMenu','cart3','Sales',$salesOpen,[['sales.index','receipt','All Sales'],['backdated-invoices.index','calendar-check','Backdated Invoices'],['quotations.index','file-earmark-text','Quotations'],['sales-orders.index','clipboard-check','Sales Orders'],['delivery-notes.index','truck','Delivery Notes'],['sale-returns.index','arrow-return-left','Sales Returns']]],
           ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchases.direct.create','receipt-cutoff','Bill to Invoice'],['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['imports.index','file-earmark-spreadsheet','Bulk Inventory Import'],['serial-numbers.index','upc-scan','Serials & Warranty'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
-          ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','person-lines-fill','Receivables — Customer Ledgers'],['payables.index','truck-flatbed','Payables — Supplier Ledgers'],['accounting.accounts','journal-text','General Account Ledgers'],['stock.index','boxes','Stock Ledgers'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting Journals']]],
+          ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','person-lines-fill','Receivables — Customer Ledgers'],['payables.all','wallet2','All Payables'],['payables.index','truck-flatbed','Payables — Supplier Ledgers'],['accounting.accounts','journal-text','General Account Ledgers'],['stock.index','boxes','Stock Ledgers'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting Journals']]],
           ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['accounting.trial-balance','list-columns-reverse','Trial Balance'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
           ['adminMenu','gear','Administration',$adminOpen,[['admin.backdated-invoices.index','calendar-check','Backdated Invoice Approvals',[],'backdated_invoices.approve'],['admin.users.index','people','Staff Users'],['admin.roles.index','person-lock','Roles & Permissions'],['controls.index','shield-check','Control Center']]]
         ];
@@ -92,7 +92,8 @@
                     'sale-returns.index'=>['sale-returns.*'],
                     'cashier-sessions.index'=>['cashier-sessions.*'],
                     'receivables.index'=>['receivables.*'],
-                    'payables.index'=>['payables.*'],
+                    'payables.all'=>['payables.all','payables.all.export'],
+                    'payables.index'=>['payables.index','payables.history','payables.export.excel','payables.print','payables.create','payables.store','payables.aging','payables.ledger'],
                     'expenses.index'=>['expenses.*'],
                     'accounting.accounts'=>['accounting.accounts','accounting.ledger'],
                     'accounting.trial-balance'=>['accounting.trial-balance','accounting.trial-balance.export'],
