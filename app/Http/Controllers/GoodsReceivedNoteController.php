@@ -33,6 +33,18 @@ class GoodsReceivedNoteController extends Controller
         ]);
     }
 
+    public function directProductOptions(Request $request)
+    {
+        return Product::where('company_id', $request->user()->company_id)
+            ->where('is_active', true)->orderBy('name')->get()
+            ->map(fn (Product $product) => [
+                'id' => $product->id,
+                'label' => $product->item_code.' — '.$product->name,
+                'cost' => $product->average_cost,
+                'serial_tracking' => $product->serial_tracking,
+            ])->values();
+    }
+
     public function directStore(DirectPurchaseRequest $request, DocumentNumberService $numbers, InventoryReceivingService $inventory)
     {
         $data = $request->validated();
