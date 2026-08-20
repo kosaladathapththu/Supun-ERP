@@ -39,8 +39,8 @@ class CashierSessionService
             ->where('p.payment_method', 'cash')->whereBetween('p.payment_date', [$from, $to])->sum('p.amount');
         $receipts = DB::table('customer_receipts')->where('company_id', $company)->where('received_by', $user)
             ->where('status', 'posted')->where('payment_method', 'cash')->whereBetween('created_at', [$from, $to])->sum('amount');
-        $expenses = DB::table('expenses')->where('company_id', $company)->where('created_by', $user)
-            ->where('status', 'posted')->where('payment_method', 'cash')->whereBetween('created_at', [$from, $to])->sum('amount');
+        $expenses = DB::table('expense_payments')->where('company_id', $company)->where('paid_by', $user)
+            ->where('payment_method', 'cash')->whereBetween('created_at', [$from, $to])->sum('amount');
         $supplierPayments = DB::table('supplier_payments')->where('company_id', $company)->where('paid_by', $user)
             ->where('status', 'posted')->where('payment_method', 'cash')->whereBetween('created_at', [$from, $to])->sum('amount');
         $refunds = DB::table('sale_returns')->where('company_id', $company)->where('created_by', $user)
