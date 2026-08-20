@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('customers', CustomerController::class)->parameters(['customers' => 'record'])->except(['destroy'])->middleware('permission:customers.view');
     Route::resource('suppliers', SupplierController::class)->parameters(['suppliers' => 'record'])->except(['show', 'destroy'])->middleware('permission:suppliers.view');
     Route::middleware('permission:purchases.view')->group(function () {
+        Route::get('purchases/bill-to-invoice', [GoodsReceivedNoteController::class, 'directCreate'])->name('purchases.direct.create');
+        Route::post('purchases/bill-to-invoice', [GoodsReceivedNoteController::class, 'directStore'])->name('purchases.direct.store');
         Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show']);
         Route::post('purchase-orders/{purchase_order}/confirm', [PurchaseOrderController::class, 'confirm'])->middleware('permission:purchases.approve')->name('purchase-orders.confirm');
         Route::get('purchase-orders/{purchase_order}/receive', [GoodsReceivedNoteController::class, 'create'])->name('grn.create');

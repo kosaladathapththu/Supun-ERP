@@ -49,6 +49,42 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertDatabaseCount('product_prices', 2);
     }
 
+    public function test_admin_can_create_multiple_products_from_manual_sheet(): void
+    {
+        $admin = User::where('email', 'admin@supun-erp.local')->firstOrFail();
+        $this->actingAs($admin);
+        $categoryId = DB::table('product_categories')->where('company_id', $admin->company_id)->value('id');
+        $unitId = DB::table('units')->where('company_id', $admin->company_id)->where('code', 'PCS')->value('id');
+
+        $this->post(route('products.store'), ['items' => [
+            ['item_code' => 'SHEET-001', 'barcode' => '900000000001', 'name' => 'Sheet Product One', 'product_category_id' => $categoryId, 'unit_id' => $unitId, 'average_cost' => 100, 'retail_price' => 130, 'wholesale_price' => 120, 'minimum_stock' => 2, 'reorder_level' => 4, 'warranty_months' => 12, 'serial_tracking' => 1, 'is_active' => 1],
+            ['item_code' => 'SHEET-002', 'name' => 'Sheet Product Two', 'product_category_id' => $categoryId, 'unit_id' => $unitId, 'average_cost' => 200, 'retail_price' => 250, 'wholesale_price' => 230, 'minimum_stock' => 1, 'reorder_level' => 3, 'warranty_months' => 0, 'is_active' => 1],
+        ]])->assertSessionHasNoErrors()->assertRedirect(route('products.index'));
+
+        $this->assertDatabaseHas('products', ['item_code' => 'SHEET-001', 'serial_tracking' => 1]);
+        $this->assertDatabaseHas('products', ['item_code' => 'SHEET-002', 'is_active' => 1]);
+        $this->assertDatabaseCount('product_prices', 4);
+    }
+
+    public function test_product_sheet_can_continue_to_purchase_with_created_product(): void
+    {
+        $admin = User::where('email', 'admin@supun-erp.local')->firstOrFail();
+        $this->actingAs($admin);
+        $categoryId = DB::table('product_categories')->where('company_id', $admin->company_id)->value('id');
+        $unitId = DB::table('units')->where('company_id', $admin->company_id)->where('code', 'PCS')->value('id');
+
+        $response = $this->post(route('products.store'), ['after_save' => 'purchase', 'items' => [[
+            'item_code' => 'BUY-001', 'name' => 'Purchase Ready Product', 'product_category_id' => $categoryId, 'unit_id' => $unitId,
+            'average_cost' => 75, 'retail_price' => 100, 'wholesale_price' => 90, 'minimum_stock' => 1, 'reorder_level' => 2,
+            'warranty_months' => 0, 'is_active' => 1,
+        ]]]);
+
+        $product = Product::where('item_code', 'BUY-001')->firstOrFail();
+        $response->assertRedirect(route('purchases.direct.create', ['products' => $product->id]));
+        $this->get(route('purchases.direct.create', ['products' => $product->id]))
+            ->assertOk()->assertSee('Purchase Ready Product')->assertSee('Bill to Invoice');
+    }
+
     public function test_admin_can_create_customer_and_supplier(): void
     {
         $this->actingAs(User::where('email', 'admin@supun-erp.local')->firstOrFail());

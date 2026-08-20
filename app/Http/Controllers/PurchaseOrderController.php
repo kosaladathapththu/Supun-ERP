@@ -17,9 +17,18 @@ class PurchaseOrderController extends Controller
         return view('purchase-orders.index', ['orders' => PurchaseOrder::with('supplier')->where('company_id', $r->user()->company_id)->latest('order_date')->paginate(15)]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('purchase-orders.form', ['suppliers' => Supplier::where('company_id', auth()->user()->company_id)->where('is_active', true)->orderBy('name')->get(), 'products' => Product::where('company_id', auth()->user()->company_id)->where('is_active', true)->orderBy('name')->get()]);
+        $companyId = $request->user()->company_id;
+        $products = Product::where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get();
+        $requestedIds = collect(explode(',', (string) $request->query('products')))
+            ->filter(fn ($id) => ctype_digit($id))->map(fn ($id) => (int) $id)->unique()->take(100);
+
+        return view('purchase-orders.form', [
+            'suppliers' => Supplier::where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(),
+            'products' => $products,
+            'selectedProducts' => $products->whereIn('id', $requestedIds)->values(),
+        ]);
     }
 
     public function store(PurchaseOrderRequest $r, DocumentNumberService $numbers)

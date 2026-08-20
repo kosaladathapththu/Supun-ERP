@@ -40,7 +40,7 @@
             $masterOpen=request()->routeIs('products.*','categories.*','brands.*','units.*','customers.*','suppliers.*');
             $posOpen=request()->routeIs('sales.create','sales.cash.create','sales.credit.create');
             $salesOpen=(request()->routeIs('sales.*','backdated-invoices.*','quotations.*','sales-orders.*','delivery-notes.*','sale-returns.*','sales-exchanges.*')&&!$posOpen);
-            $purchaseOpen=request()->routeIs('purchase-orders.*','grn.*','purchase-returns.*');
+            $purchaseOpen=request()->routeIs('purchases.direct.*','purchase-orders.*','grn.*','purchase-returns.*');
             $inventoryOpen=request()->routeIs('stock.*','inventory-operations.*','serial-numbers.*','imports.*');
             $financeOpen=request()->routeIs('cashier-sessions.*','receivables.*','payables.*','expenses.*','accounting.*');
             $reportsOpen=request()->routeIs('statements.*','reports.*');
@@ -53,7 +53,7 @@
         $groups=[
           ['masterMenu','database','Master Data',$masterOpen,[['products.index','box-seam','Products'],['categories.index','diagram-3','Categories'],['brands.index','tags','Brands'],['units.index','rulers','Units'],['customers.index','people','Customers'],['suppliers.index','truck','Suppliers']]],
           ['salesMenu','cart3','Sales',$salesOpen,[['sales.index','receipt','All Sales'],['backdated-invoices.index','calendar-check','Backdated Invoices'],['quotations.index','file-earmark-text','Quotations'],['sales-orders.index','clipboard-check','Sales Orders'],['delivery-notes.index','truck','Delivery Notes'],['sale-returns.index','arrow-return-left','Sales Returns']]],
-          ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
+          ['purchaseMenu','bag','Purchases',$purchaseOpen,[['purchases.direct.create','receipt-cutoff','Bill to Invoice'],['purchase-orders.index','bag','Purchase Orders'],['grn.index','box-arrow-in-down','Goods Received / GRN'],['purchase-returns.index','arrow-return-right','Purchase Returns']]],
           ['inventoryMenu','boxes','Inventory',$inventoryOpen,[['stock.index','boxes','Current Stock'],['imports.index','file-earmark-spreadsheet','Bulk Inventory Import'],['serial-numbers.index','upc-scan','Serials & Warranty'],['inventory-operations.index','arrow-left-right','Inventory Operations']]],
           ['financeMenu','bank','Finance',$financeOpen,[['cashier-sessions.index','cash-stack','Cashier Closing'],['receivables.index','person-lines-fill','Receivables — Customer Ledgers'],['payables.index','truck-flatbed','Payables — Supplier Ledgers'],['accounting.accounts','journal-text','General Account Ledgers'],['stock.index','boxes','Stock Ledgers'],['expenses.index','receipt','Expenses'],['accounting.journals','journal-bookmark','Accounting Journals']]],
           ['reportsMenu','bar-chart-line','Reports',$reportsOpen,[['reports.index','grid','Report Center'],['statements.index','file-earmark-bar-graph','Financial Statements'],['statements.profit-loss','graph-up-arrow','Profit & Loss'],['statements.balance-sheet','columns-gap','Balance Sheet'],['statements.cash-flow','cash-stack','Cash Flow'],['statements.reconciliation','check2-square','Reconciliation'],['reports.profitability','pie-chart','Profitability Report'],['reports.inventory','boxes','Inventory Report']]],
@@ -79,6 +79,7 @@
                     'suppliers.index'=>['suppliers.*'],
                     'imports.index'=>['imports.*'],
                     'purchase-orders.index'=>['purchase-orders.*'],
+                    'purchases.direct.create'=>['purchases.direct.*'],
                     'grn.index'=>['grn.*'],
                     'purchase-returns.index'=>['purchase-returns.*'],
                     'stock.index'=>['stock.*'],

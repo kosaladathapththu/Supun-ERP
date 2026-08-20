@@ -25,11 +25,38 @@ return view('products.index', ['products' => $q->latest()->paginate(15)->withQue
 
     public function create()
     {
-        return view('products.form', $this->formData(new Product));
+        return view('products.create', $this->formData(new Product));
     }
 
     public function store(ProductRequest $r)
     {
+        if ($r->has('items')) {
+            $items = $r->validated('items');
+            $products = DB::transaction(function () use ($items, $r) {
+                $created = collect();
+                foreach ($items as $item) {
+                    $p = Product::create(collect($item)->except(['retail_price', 'wholesale_price'])->merge([
+                        'company_id' => $r->user()->company_id,
+                        'serial_tracking' => (bool) ($item['serial_tracking'] ?? false),
+                        'is_active' => (bool) ($item['is_active'] ?? false),
+                    ])->all());
+                    $this->pricesFromArray($p, $item, $r->user()->id);
+                    $created->push($p);
+                }
+
+                return $created;
+            });
+
+            $count = count($items);
+
+            if ($r->input('after_save') === 'purchase') {
+                return redirect()->route('purchases.direct.create', ['products' => $products->pluck('id')->implode(',')])
+                    ->with('success', $count.' product'.($count === 1 ? '' : 's').' created. Complete the supplier bill to post the purchase invoice.');
+            }
+
+            return redirect()->route('products.index')->with('success', $count.' product'.($count === 1 ? '' : 's').' created successfully.');
+        }
+
         DB::transaction(function () use ($r) {
         $p = Product::create($this->data($r) + ['company_id' => $r->user()->company_id]);
         $this->prices($p, $r);
@@ -71,6 +98,20 @@ return view('products.index', ['products' => $q->latest()->paginate(15)->withQue
                     $current->update(['is_active' => false, 'effective_until' => now()]);
                 }ProductPrice::create(['product_id' => $p->id, 'price_type' => $type, 'amount' => $amount, 'effective_from' => now(), 'is_active' => true, 'created_by' => $r->user()->id]);
             }
+        }
+    }
+
+    private function pricesFromArray(Product $product, array $item, int $userId): void
+    {
+        foreach (['retail', 'wholesale'] as $type) {
+            ProductPrice::create([
+                'product_id' => $product->id,
+                'price_type' => $type,
+                'amount' => $item[$type.'_price'],
+                'effective_from' => now(),
+                'is_active' => true,
+                'created_by' => $userId,
+            ]);
         }
     }
 
