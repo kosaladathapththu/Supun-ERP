@@ -137,17 +137,23 @@ Route::middleware('auth')->group(function () {
     Route::get('journals', [AccountingController::class, 'journals'])->name('journals');
     Route::get('journals/{journal}', [AccountingController::class, 'show'])->name('show');
     Route::get('trial-balance', [AccountingController::class, 'trialBalance'])->name('trial-balance');
+    Route::get('trial-balance/export/excel', [AccountingController::class, 'exportTrialBalance'])->name('trial-balance.export');
     Route::get('ledger/{account}', [AccountingController::class, 'ledger'])->name('ledger');
     });
     Route::middleware('permission:accounting.view')->prefix('statements')->name('statements.')->group(function () {
     Route::get('/', [StatementController::class, 'index'])->name('index');
     Route::get('profit-loss', [StatementController::class, 'profitLoss'])->name('profit-loss');
+    Route::get('profit-loss/export/excel', [StatementController::class, 'exportProfitLoss'])->name('profit-loss.export');
     Route::get('balance-sheet', [StatementController::class, 'balanceSheet'])->name('balance-sheet');
+    Route::get('balance-sheet/export/excel', [StatementController::class, 'exportBalanceSheet'])->name('balance-sheet.export');
     Route::get('cash-flow', [StatementController::class, 'cashFlow'])->name('cash-flow');
+    Route::get('cash-flow/export/excel', [StatementController::class, 'exportCashFlow'])->name('cash-flow.export');
     Route::get('reconciliation', [StatementController::class, 'reconciliation'])->name('reconciliation');
+    Route::get('reconciliation/export/excel', [StatementController::class, 'exportReconciliation'])->name('reconciliation.export');
     });
     Route::middleware('permission:accounting.view')->prefix('reports')->name('reports.')->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('export/excel', [ReportController::class, 'exportDashboard'])->name('export');
     Route::get('profitability', [ReportController::class, 'profitability'])->name('profitability');
     Route::get('profitability/export', [ReportController::class, 'exportProfitability'])->name('profitability.export');
     Route::get('inventory', [ReportController::class, 'inventory'])->name('inventory');
@@ -185,6 +191,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('accounting/accounts', [AccountingController::class, 'accounts'])->middleware('permission:accounting.view')->name('accounting.accounts');
     Route::get('expenses/{expense}/payment', [ExpenseController::class, 'payment'])->middleware('permission:accounting.view')->name('expenses.payment');
+    Route::get('expenses/export/excel', [ExpenseController::class, 'exportExcel'])->middleware('permission:accounting.view')->name('expenses.export');
     Route::post('expenses/{expense}/payment', [ExpenseController::class, 'storePayment'])->middleware('permission:accounting.view')->name('expenses.payment.store');
     Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:accounting.view');
     Route::middleware('permission:cashiers.view')->prefix('cashier-sessions')->name('cashier-sessions.')->group(function () {

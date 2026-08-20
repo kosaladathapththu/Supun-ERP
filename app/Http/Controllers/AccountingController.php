@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\JournalEntry;
 use App\Models\JournalLine;
+use App\Services\ReportXlsxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -54,6 +55,17 @@ return view('accounting.journals', ['entries' => $q->latest('entry_date')->lates
         $totals = JournalLine::select('account_id', DB::raw('SUM(debit) debit_total'), DB::raw('SUM(credit) credit_total'))->whereHas('entry', fn ($q) => $q->where('company_id', $company)->where('status', 'posted')->whereDate('entry_date', '<=', $to))->groupBy('account_id')->get()->keyBy('account_id');
 
         return view('accounting.trial-balance', compact('accounts', 'totals', 'to'));
+    }
+
+    public function exportTrialBalance(Request $r, ReportXlsxService $excel)
+    {
+        $company = $r->user()->company_id;
+        $to = $r->input('to', now()->toDateString());
+        $accounts = Account::with('type')->where('company_id', $company)->where('is_active', 1)->orderBy('code')->get();
+        $totals = JournalLine::select('account_id', DB::raw('SUM(debit) debit_total'), DB::raw('SUM(credit) credit_total'))->whereHas('entry', fn ($q) => $q->where('company_id', $company)->where('status', 'posted')->whereDate('entry_date', '<=', $to))->groupBy('account_id')->get()->keyBy('account_id');
+        $rows = $accounts->map(function ($account) use ($totals) { $total = $totals->get($account->id); return [$account->code, $account->name, $account->type->name, (float) ($total?->debit_total ?? 0), (float) ($total?->credit_total ?? 0)]; });
+        $path = $excel->create('Trial Balance', "As at {$to}", ['Code', 'Account', 'Type', 'Debit', 'Credit'], $rows, ['D', 'E'], ['Total debit' => (float) $rows->sum(3), 'Total credit' => (float) $rows->sum(4)]);
+        return response()->download($path, "trial-balance-{$to}.xlsx")->deleteFileAfterSend(true);
     }
 
     public function ledger(Request $r, Account $account)

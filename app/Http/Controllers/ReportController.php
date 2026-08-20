@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\ManagementReportService;
+use App\Services\ReportXlsxService;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
@@ -40,30 +40,32 @@ class ReportController extends Controller
         return view('reports.inventory', compact('rows'));
     }
 
-    public function exportProfitability(Request $r, ManagementReportService $s): StreamedResponse
+    public function exportDashboard(Request $r, ManagementReportService $s, ReportXlsxService $excel)
+    {
+        [$from,$to] = $this->dates($r);
+        $data = $s->dashboard($r->user()->company_id, $from, $to);
+        $labels = ['net_sales' => 'Net sales', 'gross_profit' => 'Gross profit', 'margin' => 'Gross margin %', 'orders' => 'Invoices', 'average_invoice' => 'Average invoice', 'units' => 'Units sold', 'returns' => 'Returns', 'stock_value' => 'Stock value'];
+        $rows = collect($labels)->map(fn ($label, $key) => [$label, (float) $data['kpis'][$key]])->values();
+        $path = $excel->create('Management Intelligence Summary', "Period {$from} to {$to}", ['Metric', 'Value'], $rows, ['B']);
+        return response()->download($path, "management-report-{$from}-to-{$to}.xlsx")->deleteFileAfterSend(true);
+    }
+
+    public function exportProfitability(Request $r, ManagementReportService $s, ReportXlsxService $excel)
     {
         [$from,$to] = $this->dates($r);
         $rows = $s->profitability($r->user()->company_id, $from, $to);
 
-        return response()->streamDownload(function () use ($rows) {
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['Item Code', 'Product', 'Category', 'Brand', 'Net Quantity', 'Net Sales', 'Cost', 'Gross Profit', 'Margin %']);
-        foreach ($rows as $x) {
-        fputcsv($out, [$x->product->item_code, $x->product->name, $x->product->category?->name, $x->product->brand?->name, $x->quantity, $x->sales, $x->cost, $x->profit, $x->margin]);
-        }fclose($out);
-        }, "product-profitability-{$from}-to-{$to}.csv", ['Content-Type' => 'text/csv']);
+        $data = $rows->map(fn ($x) => [$x->product->item_code, $x->product->name, $x->product->category?->name, $x->product->brand?->name, (float) $x->quantity, (float) $x->sales, (float) $x->cost, (float) $x->profit, (float) $x->margin]);
+        $path = $excel->create('Product Profitability', "Period {$from} to {$to}", ['Item Code', 'Product', 'Category', 'Brand', 'Net Quantity', 'Net Sales', 'Cost', 'Gross Profit', 'Margin %'], $data, ['F', 'G', 'H']);
+        return response()->download($path, "product-profitability-{$from}-to-{$to}.xlsx")->deleteFileAfterSend(true);
     }
 
-    public function exportInventory(Request $r, ManagementReportService $s): StreamedResponse
+    public function exportInventory(Request $r, ManagementReportService $s, ReportXlsxService $excel)
     {
         $rows = $s->inventory($r->user()->company_id);
 
-        return response()->streamDownload(function () use ($rows) {
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['Item Code', 'Product', 'Category', 'Brand', 'Quantity', 'Average Cost', 'Stock Value', 'Status']);
-        foreach ($rows as $x) {
-            fputcsv($out, [$x->product->item_code, $x->product->name, $x->product->category?->name, $x->product->brand?->name, $x->quantity, $x->average_cost, $x->value, $x->status]);
-        }fclose($out);
-        }, 'inventory-valuation-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
+        $data = $rows->map(fn ($x) => [$x->product->item_code, $x->product->name, $x->product->category?->name, $x->product->brand?->name, (float) $x->quantity, (float) $x->average_cost, (float) $x->value, str($x->status)->headline()->toString()]);
+        $path = $excel->create('Inventory Valuation', 'As at '.now()->toDateString(), ['Item Code', 'Product', 'Category', 'Brand', 'Quantity', 'Average Cost', 'Stock Value', 'Status'], $data, ['F', 'G'], ['Total stock value' => (float) $rows->sum('value')]);
+        return response()->download($path, 'inventory-valuation-'.now()->format('Y-m-d').'.xlsx')->deleteFileAfterSend(true);
     }
 }

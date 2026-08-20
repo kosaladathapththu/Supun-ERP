@@ -7,6 +7,7 @@ use App\Models\Expense;
 use App\Models\ExpensePayment;
 use App\Services\DocumentNumberService;
 use App\Services\JournalPostingService;
+use App\Services\ReportXlsxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -25,6 +26,14 @@ class ExpenseController extends Controller
     public function create(Request $request)
     {
         return view('expenses.create', ['accounts' => $this->accounts($request->user()->company_id)]);
+    }
+
+    public function exportExcel(Request $request, ReportXlsxService $excel)
+    {
+        $expenses = Expense::with('account')->where('company_id', $request->user()->company_id)->orderBy('expense_date')->get();
+        $rows = $expenses->map(fn ($x) => [$x->document_number, $x->expense_date->format('Y-m-d'), $x->due_date?->format('Y-m-d'), $x->payee, $x->account->code.' — '.$x->account->name, $x->description, (float) $x->amount, (float) $x->paid_amount, (float) $x->balance_amount, str($x->payment_status)->headline()->toString()]);
+        $path = $excel->create('Expense Bills Report', 'All posted expense bills as at '.now()->toDateString(), ['Bill', 'Bill Date', 'Due Date', 'Payee', 'Expense Account', 'Description', 'Bill Amount', 'Paid', 'Not Paid Yet', 'Status'], $rows, ['G', 'H', 'I'], ['Total billed' => (float) $expenses->sum('amount'), 'Total paid' => (float) $expenses->sum('paid_amount'), 'Total payable' => (float) $expenses->sum('balance_amount')]);
+        return response()->download($path, 'expense-bills-'.now()->format('Y-m-d').'.xlsx')->deleteFileAfterSend(true);
     }
 
     public function store(Request $request)
