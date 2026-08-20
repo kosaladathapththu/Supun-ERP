@@ -77,7 +77,7 @@ return redirect()->route($this->route.'.index')->with('success', $this->title.' 
 
     protected function data($r)
     {
-        $fields = $this->route === 'customers' ? ['code', 'name', 'business_name', 'phone', 'email', 'address', 'credit_enabled', 'default_due_term', 'default_credit_days', 'is_active'] : ['code', 'name', 'contact_person', 'phone', 'email', 'address', 'is_active'];
+        $fields = $this->route === 'customers' ? ['code', 'name', 'business_name', 'phone', 'email', 'address', 'credit_enabled', 'default_due_term', 'default_credit_days', 'is_active'] : ['code', 'name', 'contact_person', 'phone', 'email', 'address', 'opening_balance', 'opening_balance_date', 'is_active'];
         $d = $r->safe()->only($fields);
         $d['is_active'] = $r->boolean('is_active');
         if ($this->route === 'customers') {

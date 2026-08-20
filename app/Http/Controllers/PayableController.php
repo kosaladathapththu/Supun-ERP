@@ -30,6 +30,12 @@ class PayableController extends Controller
             ->orderBy('name')
             ->get();
 
+        $creditsBySupplier = DebitNote::where('company_id', $companyId)->where('status', '!=', 'voided')->selectRaw('supplier_id, SUM(amount) total')->groupBy('supplier_id')->pluck('total', 'supplier_id');
+        $suppliers->each(function ($supplier) use ($creditsBySupplier) {
+            $supplier->total_invoiced = (float) $supplier->opening_balance + (float) $supplier->total_invoiced;
+            $supplier->current_payable = max(0, (float) $supplier->opening_balance + (float) $supplier->total_invoiced - (float) $supplier->opening_balance - (float) $supplier->total_paid - (float) ($creditsBySupplier[$supplier->id] ?? 0));
+        });
+
         $reportTotals = [
             'invoiced' => (float) $suppliers->sum('total_invoiced'),
             'paid' => (float) $suppliers->sum('total_paid'),
