@@ -55,7 +55,10 @@ return new class extends Migration
                 $t->foreignId('supplier_invoice_id')->constrained()->restrictOnDelete();
                 $t->decimal('amount', 18, 2);
                 $t->timestamps();
-                $t->unique(['supplier_payment_id', 'supplier_invoice_id']);
+                $t->unique(
+                    ['supplier_payment_id', 'supplier_invoice_id'],
+                    'supplier_payment_invoice_unique'
+                );
             });
         }
 
