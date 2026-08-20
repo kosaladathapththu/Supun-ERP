@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Supplier;
+use App\Models\DebitNote;
 use App\Models\SupplierInvoice;
 use App\Models\SupplierPayment;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,14 @@ class PayableXlsxExportService
             'total_paid' => SupplierPayment::selectRaw('COALESCE(SUM(amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
             'current_payable' => SupplierInvoice::selectRaw('COALESCE(SUM(balance_amount),0)')->whereColumn('supplier_id', 'suppliers.id')->where('company_id', $companyId)->where('status', 'posted'),
         ])->orderBy('name')->get();
+        $credits = DebitNote::where('company_id', $companyId)->where('status', '!=', 'voided')->selectRaw('supplier_id, SUM(amount) total')->groupBy('supplier_id')->pluck('total', 'supplier_id');
+        $suppliers->each(function ($supplier) use ($credits) {
+            $opening = (float) $supplier->opening_balance;
+            $billed = (float) $supplier->total_invoiced;
+            $paid = (float) $supplier->total_paid;
+            $supplier->total_invoiced = $opening + $billed;
+            $supplier->current_payable = max(0, $opening + $billed - $paid - (float) ($credits[$supplier->id] ?? 0));
+        });
         $invoices = SupplierInvoice::with('supplier')->where('company_id', $companyId)->where('status', 'posted')->orderBy('invoice_date')->get();
         $payments = SupplierPayment::with('supplier')->where('company_id', $companyId)->where('status', 'posted')->orderBy('payment_date')->get();
         $totals = ['billed' => (float) $suppliers->sum('total_invoiced'), 'paid' => (float) $suppliers->sum('total_paid'), 'payable' => (float) $suppliers->sum('current_payable')];
