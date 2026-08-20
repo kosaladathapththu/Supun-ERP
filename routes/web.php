@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/change-password', [\App\Http\Controllers\PasswordController::class, 'update'])->name('password.update');
     Route::get('/', DashboardController::class)->middleware('permission:dashboard.view')->name('dashboard');
     Route::middleware('permission:products.view')->group(function () {
+        Route::post('categories/quick', [CategoryController::class, 'quickStore'])->name('categories.quick-store');
         Route::resource('categories', CategoryController::class)->parameters(['categories' => 'record'])->except(['show', 'destroy']);
         Route::resource('brands', BrandController::class)->parameters(['brands' => 'record'])->except(['show', 'destroy']);
         Route::resource('units', UnitController::class)->parameters(['units' => 'record'])->except(['show', 'destroy']);

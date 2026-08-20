@@ -7,6 +7,19 @@ use Illuminate\Validation\Rule;
 
 class ProductRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('items')) {
+            $items = collect($this->input('items', []))->map(function ($item) {
+                $item['warranty_months'] = filled($item['warranty_months'] ?? null) ? $item['warranty_months'] : 0;
+                return $item;
+            })->all();
+            $this->merge(['items' => $items]);
+        } elseif (! filled($this->input('warranty_months'))) {
+            $this->merge(['warranty_months' => 0]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -37,7 +50,7 @@ class ProductRequest extends FormRequest
                 'items.*.minimum_stock' => ['required', 'numeric', 'min:0'],
                 'items.*.reorder_level' => ['required', 'numeric', 'min:0'],
                 'items.*.rack_location' => ['nullable', 'string', 'max:80'],
-                'items.*.warranty_months' => ['required', 'integer', 'between:0,120'],
+                'items.*.warranty_months' => ['nullable', 'integer', 'between:0,120'],
                 'items.*.serial_tracking' => ['nullable', 'boolean'],
                 'items.*.is_active' => ['nullable', 'boolean'],
             ];
