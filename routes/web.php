@@ -184,7 +184,9 @@ Route::middleware('auth')->group(function () {
     Route::get('payables/suppliers/{supplier}/ledger', [PayableController::class, 'ledger'])->name('payables.ledger');
     });
     Route::get('accounting/accounts', [AccountingController::class, 'accounts'])->middleware('permission:accounting.view')->name('accounting.accounts');
-    Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store'])->middleware('permission:accounting.view');
+    Route::get('expenses/{expense}/payment', [ExpenseController::class, 'payment'])->middleware('permission:accounting.view')->name('expenses.payment');
+    Route::post('expenses/{expense}/payment', [ExpenseController::class, 'storePayment'])->middleware('permission:accounting.view')->name('expenses.payment.store');
+    Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:accounting.view');
     Route::middleware('permission:cashiers.view')->prefix('cashier-sessions')->name('cashier-sessions.')->group(function () {
     Route::get('/', [CashierSessionController::class, 'index'])->name('index');
     Route::post('open', [CashierSessionController::class, 'open'])->middleware('permission:cashiers.create')->name('open');
