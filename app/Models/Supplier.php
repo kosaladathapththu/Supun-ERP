@@ -11,5 +11,5 @@ class Supplier extends Model
 
     protected $guarded = [];
 
-    protected $casts = ['is_active' => 'boolean', 'opening_balance' => 'decimal:2'];
+    protected $casts = ['is_active' => 'boolean', 'opening_balance' => 'decimal:2', 'opening_balance_date' => 'date'];
 }

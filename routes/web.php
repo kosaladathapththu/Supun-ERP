@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('customers/{record}/print', [CustomerController::class, 'print'])->middleware('permission:customers.view')->name('customers.print');
     Route::resource('customers', CustomerController::class)->parameters(['customers' => 'record'])->except(['destroy'])->middleware('permission:customers.view');
-    Route::resource('suppliers', SupplierController::class)->parameters(['suppliers' => 'record'])->except(['show', 'destroy'])->middleware('permission:suppliers.view');
+    Route::resource('suppliers', SupplierController::class)->parameters(['suppliers' => 'record'])->except(['destroy'])->middleware('permission:suppliers.view');
     Route::middleware('permission:purchases.view')->group(function () {
         Route::get('purchases/bill-to-invoice', [GoodsReceivedNoteController::class, 'directCreate'])->name('purchases.direct.create');
         Route::get('purchases/bill-to-invoice/product-options', [GoodsReceivedNoteController::class, 'directProductOptions'])->name('purchases.direct.product-options');

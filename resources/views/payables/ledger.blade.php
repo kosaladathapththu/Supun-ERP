@@ -3,7 +3,7 @@
 @section('content')
 @php
     $entries = collect()
-        ->when((float)$supplier->opening_balance > 0, fn($entries) => $entries->push((object)['date'=>$supplier->opening_balance_date ?? $supplier->created_at,'document'=>'Opening balance','type'=>'Opening payable','debit'=>0,'credit'=>(float)$supplier->opening_balance,'order'=>0]))
+        ->push((object)['date'=>$supplier->opening_balance_date ?? $supplier->created_at,'document'=>'Opening balance','type'=>'Opening payable','debit'=>0,'credit'=>(float)$supplier->opening_balance,'order'=>0])
         ->concat($invoices->map(fn($x) => (object)['date'=>$x->invoice_date,'document'=>$x->document_number,'type'=>'Supplier invoice','debit'=>0,'credit'=>(float)$x->total_amount,'order'=>1]))
         ->concat($debitNotes->map(fn($x) => (object)['date'=>$x->note_date,'document'=>$x->document_number,'type'=>'Purchase return / debit note','debit'=>(float)$x->amount,'credit'=>0,'order'=>2]))
         ->concat($payments->map(fn($x) => (object)['date'=>$x->payment_date,'document'=>$x->payment_number,'type'=>'Supplier payment','debit'=>(float)$x->amount,'credit'=>0,'order'=>3]))

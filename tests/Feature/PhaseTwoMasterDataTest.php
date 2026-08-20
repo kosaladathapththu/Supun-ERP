@@ -94,6 +94,18 @@ class PhaseTwoMasterDataTest extends TestCase
         $this->assertDatabaseHas('suppliers', ['code' => 'SUP-001']);
     }
 
+    public function test_supplier_opening_balance_is_saved_and_shown_in_ledger(): void
+    {
+        $this->actingAs(User::where('email', 'admin@supun-erp.local')->firstOrFail());
+        $this->post(route('suppliers.store'), ['code' => 'SUP-OPEN', 'name' => 'Opening Supplier', 'opening_balance' => 12500, 'opening_balance_date' => '2026-08-01', 'is_active' => 1])
+            ->assertSessionHasNoErrors();
+
+        $supplier = \App\Models\Supplier::where('code', 'SUP-OPEN')->firstOrFail();
+        $this->assertEquals('12500.00', $supplier->opening_balance);
+        $this->get(route('suppliers.show', $supplier))->assertOk()->assertSee('Opening Supplier')->assertSee('Current payable')->assertSee('12,500.00');
+        $this->get(route('payables.ledger', $supplier))->assertOk()->assertSee('Opening payable')->assertSee('12,500.00');
+    }
+
     public function test_admin_can_validate_preview_and_confirm_master_data_csv(): void
     {
         $this->actingAs(User::where('email', 'admin@supun-erp.local')->firstOrFail());
