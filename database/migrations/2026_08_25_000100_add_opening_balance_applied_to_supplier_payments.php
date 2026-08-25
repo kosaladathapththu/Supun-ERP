@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('supplier_payments', 'opening_balance_applied')) {
+            return;
+        }
+
         Schema::table('supplier_payments', function (Blueprint $table) {
             $table->decimal('opening_balance_applied', 18, 2)->default(0)->after('allocated_amount');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasColumn('supplier_payments', 'opening_balance_applied')) {
+            return;
+        }
+
         Schema::table('supplier_payments', function (Blueprint $table) {
             $table->dropColumn('opening_balance_applied');
         });
