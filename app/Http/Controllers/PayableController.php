@@ -113,7 +113,7 @@ class PayableController extends Controller
         return response()->download($path, 'supplier-payables-'.now()->format('Ymd-His').'.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'])->deleteFileAfterSend(true);
     }
 
-    public function create(Request $request)
+    public function create(Request $request, SupplierPaymentService $service)
     {
         $companyId = $request->user()->company_id;
         $suppliers = Supplier::where('company_id', $companyId)->where('is_active', 1)->orderBy('name')->get();
@@ -121,8 +121,11 @@ class PayableController extends Controller
         $selectedInvoice = $invoiceId ? SupplierInvoice::where('company_id', $companyId)->where('balance_amount', '>', 0)->findOrFail($invoiceId) : null;
         $supplierId = $selectedInvoice?->supplier_id ?: $request->integer('supplier_id');
         $invoices = $supplierId ? SupplierInvoice::where('company_id', $companyId)->where('supplier_id', $supplierId)->where('balance_amount', '>', 0)->oldest('due_date')->get() : collect();
+        $position = $supplierId
+            ? $service->position($companyId, $supplierId)
+            : ['total_outstanding' => '0.00', 'invoice_outstanding' => '0.00', 'opening_outstanding' => '0.00'];
 
-        return view('payables.payment', compact('suppliers', 'supplierId', 'invoices', 'invoiceId', 'selectedInvoice'));
+        return view('payables.payment', compact('suppliers', 'supplierId', 'invoices', 'invoiceId', 'selectedInvoice', 'position'));
     }
 
     public function store(Request $request, SupplierPaymentService $service)
@@ -138,6 +141,8 @@ class PayableController extends Controller
         ]);
 
         $remaining = (float) $data['amount'];
+        $position = $service->position($companyId, (int) $data['supplier_id']);
+        $selectedInvoiceId = $data['invoice_id'] ?? null;
         $bills = SupplierInvoice::where('company_id', $companyId)
             ->where('supplier_id', $data['supplier_id'])
             ->where('status', 'posted')
@@ -147,6 +152,16 @@ class PayableController extends Controller
             ->orderBy('due_date')
             ->get();
         $data['allocations'] = [];
+        $data['opening_balance_applied'] = '0.00';
+
+        // Without a specifically selected bill, settle the oldest obligation
+        // (the supplier opening payable) before later invoice rows.
+        if (! $selectedInvoiceId && $remaining > 0) {
+            $apply = min($remaining, (float) $position['opening_outstanding']);
+            $data['opening_balance_applied'] = number_format($apply, 2, '.', '');
+            $remaining -= $apply;
+        }
+
         foreach ($bills as $bill) {
             if ($remaining <= 0) {
                 break;
@@ -154,6 +169,13 @@ class PayableController extends Controller
             $apply = min($remaining, (float) $bill->balance_amount);
             $data['allocations'][$bill->id] = number_format($apply, 2, '.', '');
             $remaining -= $apply;
+        }
+
+        // A direct "Pay bill" action settles that bill first, then any
+        // remaining supplier opening payable.
+        if ($selectedInvoiceId && $remaining > 0) {
+            $apply = min($remaining, (float) $position['opening_outstanding']);
+            $data['opening_balance_applied'] = number_format($apply, 2, '.', '');
         }
         unset($data['invoice_id']);
         $service->post($data, $request->user());
