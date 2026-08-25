@@ -3,7 +3,8 @@
 @section('content')
 @php
     $supplier = $suppliers->firstWhere('id',(int)$supplierId);
-    $totalOutstanding = (float)$invoices->sum('balance_amount');
+    $totalOutstanding = (float)($position['total_outstanding'] ?? $invoices->sum('balance_amount'));
+    $openingOutstanding = (float)($position['opening_outstanding'] ?? 0);
     $defaultAmount = $selectedInvoice ? (float)$selectedInvoice->balance_amount : $totalOutstanding;
 @endphp
 <div class="d-flex justify-content-between align-items-start mb-4">
