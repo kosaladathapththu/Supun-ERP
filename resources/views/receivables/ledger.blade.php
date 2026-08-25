@@ -4,15 +4,18 @@
 @php
     $openingBalance = (float) $customer->opening_balance;
     $totalInvoiced = (float) $sales->sum('grand_total');
-    $totalPaid = (float) $receipts->sum('amount');
-    $currentReceivable = $openingBalance + $totalInvoiced - $totalPaid;
+    $totalPaidAtInvoice = (float) $invoicePayments->sum('amount');
+    $totalPaidByReceipt = (float) $receipts->sum('amount');
+    $totalPaid = $totalPaidAtInvoice + $totalPaidByReceipt;
+    $currentReceivable = max(0, $openingBalance + $totalInvoiced - $totalPaid);
     $entries = collect();
     if ($openingBalance != 0) {
         $entries->push((object)['date'=>$customer->opening_balance_date,'document'=>'Opening balance','route'=>null,'type'=>'Opening','debit'=>$openingBalance,'credit'=>0,'order'=>0]);
     }
     $entries = $entries
         ->concat($sales->map(fn($sale) => (object)['date'=>$sale->sale_date,'document'=>$sale->document_number,'route'=>route('sales.show',$sale),'type'=>'Invoice','debit'=>(float)$sale->grand_total,'credit'=>0,'order'=>1]))
-        ->concat($receipts->map(fn($receipt) => (object)['date'=>$receipt->receipt_date,'document'=>$receipt->receipt_number,'route'=>route('receivables.show',$receipt),'type'=>'Payment received','debit'=>0,'credit'=>(float)$receipt->amount,'order'=>2]))
+        ->concat($invoicePayments->map(fn($payment) => (object)['date'=>$payment->payment_date,'document'=>$payment->receipt_number,'route'=>route('sales.show',$payment->sale_id),'type'=>'Payment at invoice','debit'=>0,'credit'=>(float)$payment->amount,'order'=>2]))
+        ->concat($receipts->map(fn($receipt) => (object)['date'=>$receipt->receipt_date,'document'=>$receipt->receipt_number,'route'=>route('receivables.show',$receipt),'type'=>'Payment received','debit'=>0,'credit'=>(float)$receipt->amount,'order'=>3]))
         ->sortBy(fn($entry) => optional($entry->date)->format('Y-m-d').'-'.$entry->order.'-'.$entry->document)
         ->values();
     $runningBalance = 0;

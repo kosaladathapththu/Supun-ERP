@@ -87,4 +87,29 @@ class PhaseFiveReceivablesTest extends TestCase
         $this->assertDatabaseCount('customer_receipts', 0);
         $this->assertEquals(100, $sale->fresh()->balance_amount);
     }
+
+    public function test_ledger_includes_payment_collected_when_invoice_was_created(): void
+    {
+        $sale = app(\App\Services\SalePostingService::class)->post([
+            'customer_id' => $this->customerId,
+            'channel' => 'retail',
+            'payment_type' => 'credit',
+            'due_date' => now()->addDays(30)->toDateString(),
+            'paid_amount' => 25,
+            'payment_method' => 'cash',
+            'discount_amount' => 0,
+            'items' => [['product_id' => $this->product->id, 'quantity' => 1, 'unit_price' => 100]],
+        ], $this->admin);
+
+        $this->get(route('receivables.ledger', $this->customerId))
+            ->assertOk()
+            ->assertSee('Payment at invoice')
+            ->assertSee('Rs. 25.00')
+            ->assertSee('Rs. 75.00');
+
+        $this->get(route('receivables.index'))
+            ->assertOk()
+            ->assertSee('Rs. 25.00')
+            ->assertSee('Rs. 75.00');
+    }
 }

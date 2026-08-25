@@ -90,10 +90,16 @@ return view('receivables.create', compact('customers', 'sales', 'customerId', 's
     public function ledger(Request $r, Customer $customer)
     {
         abort_unless($customer->company_id === $r->user()->company_id && ! $customer->is_walk_in && $customer->code !== 'WALK-IN', 404);
-        $sales = Sale::where('customer_id', $customer->id)->where('status', 'posted')->orderBy('sale_date')->get();
+        $sales = Sale::with(['payments' => fn ($query) => $query->where('status', 'posted')->orderBy('payment_date')])
+            ->where('customer_id', $customer->id)
+            ->where('payment_type', 'credit')
+            ->where('status', 'posted')
+            ->orderBy('sale_date')
+            ->get();
+        $invoicePayments = $sales->flatMap->payments;
         $receipts = CustomerReceipt::where('customer_id', $customer->id)->where('status', 'posted')->orderBy('receipt_date')->get();
 
-        return view('receivables.ledger', compact('customer', 'sales', 'receipts'));
+        return view('receivables.ledger', compact('customer', 'sales', 'invoicePayments', 'receipts'));
     }
 
     public function aging(Request $r)

@@ -19,6 +19,10 @@ class ReceivableReportService
             ->orderBy('name')->get();
 
         $customers->each(function ($customer) {
+            // paid_amount contains payments applied to invoices. Add any receipt
+            // balance that is still unapplied so "Total paid" represents all
+            // money actually received from the customer.
+            $customer->total_received = (float) $customer->total_received + (float) $customer->available_advance;
             $customer->current_receivable = max(0, (float) $customer->outstanding_balance - (float) $customer->available_advance);
         });
 
