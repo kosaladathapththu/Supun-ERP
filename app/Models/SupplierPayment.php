@@ -8,7 +8,13 @@ class SupplierPayment extends Model
 {
     protected $guarded = [];
 
-    protected $casts = ['payment_date' => 'date'];
+    protected $casts = [
+        'payment_date' => 'date',
+        'amount' => 'decimal:2',
+        'allocated_amount' => 'decimal:2',
+        'opening_balance_applied' => 'decimal:2',
+        'unapplied_amount' => 'decimal:2',
+    ];
 
     public function supplier()
     {
