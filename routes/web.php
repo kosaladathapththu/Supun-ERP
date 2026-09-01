@@ -135,6 +135,10 @@ Route::middleware('auth')->group(function () {
             ->only(['index', 'create', 'store', 'show']);
     });
     Route::middleware('permission:accounting.view')->prefix('accounting')->name('accounting.')->group(function () {
+    Route::get('accounts/create', [AccountingController::class, 'createAccount'])->middleware('permission:accounting.create')->name('accounts.create');
+    Route::post('accounts', [AccountingController::class, 'storeAccount'])->middleware('permission:accounting.create')->name('accounts.store');
+    Route::get('accounts/{account}/edit', [AccountingController::class, 'editAccount'])->middleware('permission:accounting.update')->name('accounts.edit');
+    Route::put('accounts/{account}', [AccountingController::class, 'updateAccount'])->middleware('permission:accounting.update')->name('accounts.update');
     Route::get('journals', [AccountingController::class, 'journals'])->name('journals');
     Route::get('journals/{journal}', [AccountingController::class, 'show'])->name('show');
     Route::get('trial-balance', [AccountingController::class, 'trialBalance'])->name('trial-balance');

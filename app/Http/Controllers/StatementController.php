@@ -70,8 +70,12 @@ class StatementController extends Controller
     public function exportBalanceSheet(Request $r, FinancialStatementService $service, ReportXlsxService $excel)
     {
         [, $to] = $this->dates($r); $statement = $service->balanceSheet($r->user()->company_id, $to);
-        $rows = $statement['rows']->filter(fn ($x) => in_array($x->type->code, ['ASSET', 'LIABILITY', 'EQUITY']))->map(fn ($x) => [$x->type->name, $x->code, $x->name, (float) $x->statement_balance])->values();
-        $path = $excel->create('Statement of Financial Position', "As at {$to}", ['Section', 'Code', 'Account', 'Amount'], $rows, ['D'], ['Current earnings' => $statement['current_earnings'], 'Total assets' => $statement['assets'], 'Total liabilities and equity' => $statement['liabilities_equity'], 'Reconciliation difference' => $statement['difference']]);
+        $rows = $statement['currentAssets']->map(fn ($x) => ['Current Assets', $x->code, $x->name, (float) $x->statement_balance])
+            ->concat($statement['nonCurrentAssets']->map(fn ($x) => ['Non-Current Assets', $x->code, $x->name, (float) $x->statement_balance]))
+            ->concat($statement['currentLiabilities']->map(fn ($x) => ['Current Liabilities', $x->code, $x->name, (float) $x->statement_balance]))
+            ->concat($statement['nonCurrentLiabilities']->map(fn ($x) => ['Non-Current Liabilities', $x->code, $x->name, (float) $x->statement_balance]))
+            ->concat($statement['rows']->where('type.code', 'EQUITY')->map(fn ($x) => ['Equity', $x->code, $x->name, (float) $x->statement_balance]))->values();
+        $path = $excel->create('Statement of Financial Position', "As at {$to}", ['Section', 'Code', 'Account', 'Amount'], $rows, ['D'], ['Current earnings' => $statement['current_earnings'], 'Total current assets' => $statement['currentAssetsTotal'], 'Total non-current assets' => $statement['nonCurrentAssetsTotal'], 'Total current liabilities' => $statement['currentLiabilitiesTotal'], 'Total non-current liabilities' => $statement['nonCurrentLiabilitiesTotal'], 'Total assets' => $statement['assets'], 'Total liabilities and equity' => $statement['liabilities_equity'], 'Reconciliation difference' => $statement['difference']]);
         return response()->download($path, "balance-sheet-{$to}.xlsx")->deleteFileAfterSend(true);
     }
 

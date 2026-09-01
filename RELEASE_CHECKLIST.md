@@ -1,4 +1,4 @@
-# CGM - Camy Global Marcket Release Checklist
+# Fuji Industries Release Checklist
 
 ## Automated gates
 

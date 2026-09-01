@@ -1,4 +1,4 @@
-# CGM - Camy Global Marcket Development Plan
+# Fuji Industries Development Plan
 
 ## Delivery rules
 

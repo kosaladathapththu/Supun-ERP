@@ -8,6 +8,7 @@ use App\Models\JournalLine;
 use App\Services\ReportXlsxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AccountingController extends Controller
 {
@@ -25,6 +26,84 @@ class AccountingController extends Controller
         $types = \App\Models\AccountType::orderBy('display_order')->get();
 
         return view('accounting.accounts', compact('accounts', 'balances', 'types'));
+    }
+
+    public function createAccount(Request $r)
+    {
+        return view('accounting.account-form', $this->accountFormData($r));
+    }
+
+    public function storeAccount(Request $r)
+    {
+        $company = $r->user()->company_id;
+        $data = $this->validateAccount($r, $company);
+        $data['company_id'] = $company;
+        $data['opening_balance'] = 0;
+        $data['opening_balance_date'] = null;
+        Account::create($data);
+
+        return redirect()->route('accounting.accounts')->with('success', 'Account created successfully.');
+    }
+
+    public function editAccount(Request $r, Account $account)
+    {
+        $this->ensureCompanyAccount($r, $account);
+
+        return view('accounting.account-form', $this->accountFormData($r, $account));
+    }
+
+    public function updateAccount(Request $r, Account $account)
+    {
+        $this->ensureCompanyAccount($r, $account);
+        $data = $this->validateAccount($r, $r->user()->company_id, $account);
+        abort_if($data['parent_id'] && $this->wouldCreateCycle($account, (int) $data['parent_id']), 422, 'An account cannot be placed below itself or one of its child accounts.');
+        $account->update($data);
+
+        return redirect()->route('accounting.accounts')->with('success', 'Account updated successfully.');
+    }
+
+    private function accountFormData(Request $r, ?Account $account = null): array
+    {
+        $company = $r->user()->company_id;
+
+        return ['account' => $account, 'types' => \App\Models\AccountType::orderBy('display_order')->get(), 'parentAccounts' => Account::with('type')->where('company_id', $company)->when($account, fn ($q) => $q->where('id', '!=', $account->id))->orderBy('code')->get()];
+    }
+
+    private function validateAccount(Request $r, int $company, ?Account $account = null): array
+    {
+        $data = $r->validate([
+            'code' => ['required', 'string', 'max:30', Rule::unique('accounts')->where(fn ($q) => $q->where('company_id', $company))->ignore($account?->id)],
+            'name' => ['required', 'string', 'max:150'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'account_type_id' => ['required', 'integer', Rule::exists('account_types', 'id')],
+            'parent_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where(fn ($q) => $q->where('company_id', $company)->whereNull('deleted_at'))],
+            'is_control_account' => ['required', 'boolean'],
+            'allow_manual_posting' => ['required', 'boolean'],
+            'is_active' => ['required', 'boolean'],
+        ]);
+        if (! empty($data['parent_id'])) {
+            $parent = Account::where('company_id', $company)->findOrFail($data['parent_id']);
+            abort_if((int) $parent->account_type_id !== (int) $data['account_type_id'], 422, 'The parent account must have the same account type.');
+        }
+        if ($data['is_control_account']) {
+            $data['allow_manual_posting'] = false;
+        }
+
+        return $data;
+    }
+
+    private function ensureCompanyAccount(Request $r, Account $account): void
+    {
+        abort_unless($account->company_id === $r->user()->company_id, 404);
+    }
+
+    private function wouldCreateCycle(Account $account, int $parentId): bool
+    {
+        for ($parent = Account::find($parentId); $parent; $parent = $parent->parent) {
+            if ($parent->id === $account->id) return true;
+        }
+
+        return false;
     }
 
     public function journals(Request $r)

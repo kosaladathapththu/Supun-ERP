@@ -63,7 +63,7 @@ class ReportXlsxService
         $sheet->freezePane('A6');
         $sheet->getSheetView()->setZoomScale(90);
         $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4)->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setFitToWidth(1)->setFitToHeight(0)->setPrintArea("A1:{$lastColumn}{$rowNumber}");
-        $sheet->getHeaderFooter()->setOddFooter('&LCGM - Camy Global Marcket&CConfidential report&RPage &P of &N');
+        $sheet->getHeaderFooter()->setOddFooter('&LFuji Industries&CConfidential report&RPage &P of &N');
         $base = tempnam(storage_path('app'), 'report-');
         if ($base === false) throw new RuntimeException('Could not create Excel report.');
         $path = $base.'.xlsx';

@@ -52,7 +52,7 @@ class PayableXlsxExportService
         $totals = ['billed' => (float) $suppliers->sum('total_invoiced'), 'paid' => (float) $suppliers->sum('total_paid'), 'payable' => (float) $suppliers->sum('current_payable')];
 
         $book = new Spreadsheet();
-        $book->getProperties()->setCreator('CGM - Camy Global Marcket')->setTitle('Supplier Payables Report');
+        $book->getProperties()->setCreator('Fuji Industries')->setTitle('Supplier Payables Report');
         $this->summary($book->getActiveSheet(), $company, $totals, $suppliers, $invoices, $generatedBy);
         $this->supplierBalances($book->createSheet(), $suppliers, $totals);
         $this->billHistory($book->createSheet(), $invoices);
@@ -73,7 +73,7 @@ class PayableXlsxExportService
     {
         $sheet->setTitle('Summary');
         $sheet->mergeCells('A1:F1')->setCellValue('A1', 'CGM - CAMY GLOBAL MARCKET');
-        $sheet->mergeCells('A2:F2')->setCellValue('A2', ($company->name ?? 'Camy Global Marcket').' - Supplier Payables Report');
+        $sheet->mergeCells('A2:F2')->setCellValue('A2', ($company->name ?? 'Fuji Industries').' - Supplier Payables Report');
         $sheet->mergeCells('A3:F3')->setCellValue('A3', 'All posted supplier invoices and payments');
         foreach (['A5:B5' => 'TOTAL SUPPLIER BILLS', 'C5:D5' => 'TOTAL PAID TO SUPPLIERS', 'E5:F5' => 'CURRENT PAYABLE'] as $range => $label) {
             $sheet->mergeCells($range)->setCellValue(explode(':', $range)[0], $label);
@@ -212,6 +212,6 @@ class PayableXlsxExportService
         $sheet->setShowGridlines(false);
         $sheet->getSheetView()->setZoomScale(90);
         $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4)->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setFitToWidth(1)->setFitToHeight(0)->setPrintArea($area);
-        $sheet->getHeaderFooter()->setOddFooter('&LCGM - Camy Global Marcket&CConfidential business report&RPage &P of &N');
+        $sheet->getHeaderFooter()->setOddFooter('&LFuji Industries&CConfidential business report&RPage &P of &N');
     }
 }

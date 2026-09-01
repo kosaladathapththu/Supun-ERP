@@ -42,12 +42,33 @@ class FinancialStatementService
     {
         $all = $this->balances($company, $to);
         $rows = $all->whereIn('type.code', ['ASSET', 'LIABILITY', 'EQUITY'])->filter(fn ($a) => abs($a->statement_balance) > .004);
-        $assets = $rows->where('type.code', 'ASSET')->sum('statement_balance');
-        $liabilities = $rows->where('type.code', 'LIABILITY')->sum('statement_balance');
+        $assetRows = $rows->where('type.code', 'ASSET');
+        $nonCurrentAssets = $assetRows->filter(fn ($account) => $this->isDescendantOf($account, '1200'));
+        $currentAssets = $assetRows->reject(fn ($account) => $this->isDescendantOf($account, '1200'));
+        $currentAssetsTotal = $currentAssets->sum('statement_balance');
+        $nonCurrentAssetsTotal = $nonCurrentAssets->sum('statement_balance');
+        $assets = $currentAssetsTotal + $nonCurrentAssetsTotal;
+        $liabilityRows = $rows->where('type.code', 'LIABILITY');
+        $nonCurrentLiabilities = $liabilityRows->filter(fn ($account) => $this->isDescendantOf($account, '2400'));
+        $currentLiabilities = $liabilityRows->reject(fn ($account) => $this->isDescendantOf($account, '2400'));
+        $currentLiabilitiesTotal = $currentLiabilities->sum('statement_balance');
+        $nonCurrentLiabilitiesTotal = $nonCurrentLiabilities->sum('statement_balance');
+        $liabilities = $currentLiabilitiesTotal + $nonCurrentLiabilitiesTotal;
         $equity = $rows->where('type.code', 'EQUITY')->sum('statement_balance');
         $pl = $all->where('type.code', 'REVENUE')->sum('statement_balance') - $all->where('type.code', 'COGS')->sum('statement_balance') - $all->where('type.code', 'EXPENSE')->sum('statement_balance');
 
-        return compact('rows', 'assets', 'liabilities', 'equity') + ['current_earnings' => $pl, 'liabilities_equity' => $liabilities + $equity + $pl, 'difference' => $assets - ($liabilities + $equity + $pl)];
+        return compact('rows', 'assets', 'liabilities', 'equity', 'currentAssets', 'nonCurrentAssets', 'currentAssetsTotal', 'nonCurrentAssetsTotal', 'currentLiabilities', 'nonCurrentLiabilities', 'currentLiabilitiesTotal', 'nonCurrentLiabilitiesTotal') + ['current_earnings' => $pl, 'liabilities_equity' => $liabilities + $equity + $pl, 'difference' => $assets - ($liabilities + $equity + $pl)];
+    }
+
+    private function isDescendantOf(Account $account, string $ancestorCode): bool
+    {
+        for ($node = $account; $node; $node = $node->parent) {
+            if ($node->code === $ancestorCode) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function cashFlow(int $company, string $from, string $to): array
