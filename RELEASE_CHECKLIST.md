@@ -1,4 +1,6 @@
-# Fuji Industries Release Checklist
+# Camy Smart Release Checklist
+
+**A Company of Supun Group of Companies**
 
 ## Automated gates
 

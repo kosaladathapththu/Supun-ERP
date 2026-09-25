@@ -13,7 +13,7 @@ class CompanySettingsSeeder extends Seeder
         $now = now();
         DB::table('companies')->updateOrInsert(
             ['code' => 'SUPUN'],
-            ['name' => 'Fuji Industries', 'legal_name' => 'Fuji Industries', 'is_active' => true, 'updated_at' => $now, 'created_at' => $now]
+            ['name' => 'Camy Smart', 'legal_name' => 'Camy Smart - A Company of Supun Group of Companies', 'is_active' => true, 'updated_at' => $now, 'created_at' => $now]
         );
         $companyId = DB::table('companies')->where('code', 'SUPUN')->value('id');
 

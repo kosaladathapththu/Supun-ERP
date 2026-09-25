@@ -1,4 +1,6 @@
-# Fuji Industries Development Plan
+# Camy Smart Development Plan
+
+**A Company of Supun Group of Companies**
 
 ## Delivery rules
 

@@ -199,6 +199,8 @@ Route::middleware('auth')->group(function () {
     Route::get('all-payables/export/excel', [PayableController::class, 'exportAllPayables'])->name('payables.all.export');
     });
     Route::get('accounting/accounts', [AccountingController::class, 'accounts'])->middleware('permission:accounting.view')->name('accounting.accounts');
+    Route::get('salaries', [ExpenseController::class, 'salaries'])->middleware('permission:accounting.view')->name('salaries.index');
+    Route::get('salaries/create', [ExpenseController::class, 'createSalary'])->middleware('permission:accounting.view')->name('salaries.create');
     Route::get('expenses/{expense}/payment', [ExpenseController::class, 'payment'])->middleware('permission:accounting.view')->name('expenses.payment');
     Route::get('expenses/export/excel', [ExpenseController::class, 'exportExcel'])->middleware('permission:accounting.view')->name('expenses.export');
     Route::post('expenses/{expense}/payment', [ExpenseController::class, 'storePayment'])->middleware('permission:accounting.view')->name('expenses.payment.store');

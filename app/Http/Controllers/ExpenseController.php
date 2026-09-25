@@ -17,10 +17,18 @@ class ExpenseController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Expense::with('account')->where('company_id', $request->user()->company_id);
+        $query = Expense::with('account')->where('company_id', $request->user()->company_id)->where('expense_type', 'general');
         $totals = (clone $query)->selectRaw('COALESCE(SUM(amount),0) billed, COALESCE(SUM(paid_amount),0) paid, COALESCE(SUM(balance_amount),0) payable')->first();
 
         return view('expenses.index', ['expenses' => $query->latest('expense_date')->paginate(20), 'totals' => $totals]);
+    }
+
+    public function salaries(Request $request)
+    {
+        $query = Expense::with('account')->where('company_id', $request->user()->company_id)->where('expense_type', 'salary');
+        $totals = (clone $query)->selectRaw('COALESCE(SUM(amount),0) billed, COALESCE(SUM(paid_amount),0) paid, COALESCE(SUM(balance_amount),0) payable')->first();
+
+        return view('expenses.index', ['expenses' => $query->latest('expense_date')->paginate(20), 'totals' => $totals, 'salaryMode' => true]);
     }
 
     public function create(Request $request)
@@ -28,7 +36,15 @@ class ExpenseController extends Controller
         $company = $request->user()->company_id;
         $previous = $request->integer('previous') ? Expense::with('account')->where('company_id', $company)->findOrFail($request->integer('previous')) : null;
         $recentBills = Expense::with('account')->where('company_id', $company)->latest('expense_date')->limit(50)->get();
-        return view('expenses.create', ['accounts' => $this->accounts($company), 'previous' => $previous, 'recentBills' => $recentBills]);
+        return view('expenses.create', ['accounts' => $this->accounts($company), 'previous' => $previous, 'recentBills' => $recentBills, 'salaryMode' => false]);
+    }
+
+    public function createSalary(Request $request)
+    {
+        $company = $request->user()->company_id;
+        $salaryAccount = Account::where('company_id', $company)->where('code', '6100')->where('is_active', 1)->firstOrFail();
+
+        return view('expenses.create', ['accounts' => collect([$salaryAccount]), 'previous' => null, 'recentBills' => collect(), 'salaryMode' => true]);
     }
 
     public function exportExcel(Request $request, ReportXlsxService $excel)
@@ -46,11 +62,18 @@ class ExpenseController extends Controller
             'expense_date' => ['required', 'date'], 'due_date' => ['nullable', 'date', 'after_or_equal:expense_date'], 'billing_period' => ['nullable', 'string', 'max:50'],
             'previous_expense_id' => ['nullable', Rule::exists('expenses', 'id')->where(fn ($q) => $q->where('company_id', $company))],
             'account_id' => ['required', Rule::exists('accounts', 'id')->where(fn ($q) => $q->where('company_id', $company)->where('is_active', 1))],
+            'expense_type' => ['nullable', Rule::in(['general', 'salary'])], 'business_unit' => ['nullable', 'string', 'max:100'],
             'payee' => ['required', 'string', 'max:150'], 'amount' => ['required', 'numeric', 'gt:0'],
             'paid_amount' => ['required', 'numeric', 'min:0', 'lte:amount'],
             'payment_method' => [Rule::requiredIf(fn () => (float) $request->input('paid_amount') > 0), 'nullable', Rule::in(['cash', 'cheque', 'bank_transfer', 'online_payment'])],
             'reference' => ['nullable', 'string', 'max:150'], 'description' => ['required', 'string', 'max:1000'],
         ]);
+        $data['expense_type'] = $data['expense_type'] ?? 'general';
+        $data['business_unit'] = ($data['business_unit'] ?? null) ?: 'Head Office';
+        if ($data['expense_type'] === 'salary') {
+            $salaryAccount = Account::where('company_id', $company)->where('code', '6100')->where('is_active', 1)->firstOrFail();
+            $data['account_id'] = $salaryAccount->id;
+        }
         $expense = DB::transaction(function () use ($data, $request, $company) {
             $paid = (string) $data['paid_amount'];
             $balance = bcsub((string) $data['amount'], $paid, 2);
@@ -109,7 +132,13 @@ class ExpenseController extends Controller
 
     private function accounts(int $company)
     {
-        return Account::where('company_id', $company)->whereBetween('code', ['6000', '6999'])->where('allow_manual_posting', 1)->where('is_active', 1)->orderBy('code')->get();
+        return Account::where('company_id', $company)
+            ->whereBetween('code', ['6000', '6999'])
+            ->whereNotIn('code', ['6000', '6100'])
+            ->where('allow_manual_posting', 1)
+            ->where('is_active', 1)
+            ->orderBy('code')
+            ->get();
     }
 
     private function cashAccount(string $method): string
